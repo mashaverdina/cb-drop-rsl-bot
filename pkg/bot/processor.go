@@ -45,6 +45,15 @@ type CbProcessor struct {
 
 func (p *CbProcessor) Handle(state UserState, msg *tgbotapi.Message) (UserState, tgbotapi.Chattable, error) {
 	log.Println("handling message from %v with CbProcessor", msg.From.UserName)
-	resp := tgbotapi.NewMessage(msg.Chat.ID, "АХАХАХХАА ТЫТ ТУТ ЗАВИС")
-	return state, resp, nil
+
+	switch msg.Text {
+	case keyboards.Reject:
+		state.State = MainMenu
+		resp := tgbotapi.NewMessage(msg.Chat.ID, "До встречи")
+		resp.ReplyMarkup = tgbotapi.NewRemoveKeyboard(false)
+		return state, resp, nil
+	default:
+		resp := tgbotapi.NewMessage(msg.Chat.ID, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)")
+		return state, resp, nil
+	}
 }
