@@ -11,29 +11,43 @@ import (
 )
 
 type Bot struct {
-	ctx     context.Context
-	botAPI  *tgbotapi.BotAPI
-	states  map[int]UserState
-	cancel  context.CancelFunc
-	updates tgbotapi.UpdatesChannel
-	done    chan interface{}
-	m       sync.Mutex
-	started bool
-	stopped bool
+	ctx        context.Context
+	botAPI     *tgbotapi.BotAPI
+	states     map[int64]UserState
+	processors map[State]Processor
+	cancel     context.CancelFunc
+	updates    tgbotapi.UpdatesChannel
+	done       chan interface{}
+	m          sync.Mutex
+	started    bool
+	stopped    bool
 }
 
 func NewBot(botAPI *tgbotapi.BotAPI) *Bot {
-	return &Bot{
-		ctx:     nil,
-		botAPI:  botAPI,
-		states:  make(map[int]UserState),
-		cancel:  nil,
-		updates: nil,
-		done:    make(chan interface{}),
-		m:       sync.Mutex{},
-		started: false,
-		stopped: false,
+	bot := &Bot{
+		ctx:        nil,
+		botAPI:     botAPI,
+		states:     make(map[int64]UserState),
+		processors: make(map[State]Processor),
+		cancel:     nil,
+		updates:    nil,
+		done:       make(chan interface{}),
+		m:          sync.Mutex{},
+		started:    false,
+		stopped:    false,
 	}
+
+	bot.processors = map[State]Processor{
+		MainMenu: &MainProcessor{},
+		Cb5:      NewCbProcessor(5),
+		Cb6:      NewCbProcessor(6),
+	}
+
+	bot.processors[MainMenu] = &MainProcessor{}
+	bot.processors[Cb5] = NewCbProcessor(5)
+	bot.processors[Cb6] = NewCbProcessor(6)
+	return bot
+
 }
 
 func (b *Bot) Start(ctx context.Context) error {
@@ -83,51 +97,43 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 		default:
 		}
 
+		pm := ProcessingMessage{}
+
 		if update.Message != nil {
-			// Construct a new message from the given chat ID and containing
-			// the text that we received.
-			// msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
-
-			// If the message was open, add a copy of our numeric keyboard.
-			// switch update.Message.Text {
-			// case "/start", "start":
-			// 	msg.Text = "Выбирай действие"
-			// 	msg.ReplyMarkup = keyboards.HelloKeyboard
-			// // case "":
-			// // 	msg.ReplyMarkup = keyboards.NumericKeyboard
-			// case "/stop", "stop":
-			// 	msg.Text = "Пока"
-			// 	msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(false)
-			// default:
-			msg, err := b.processUserMessage(update.Message)
-			if err != nil {
-				log.Fatalf("got error, while processing message: %v", err)
-			}
-
-			// Send the message.
-			if _, err := b.botAPI.Send(msg); err != nil {
-				// todo не паниковать
-				panic(err)
+			pm = ProcessingMessage{
+				UserID:    update.Message.Chat.ID,
+				ChatID:    update.Message.Chat.ID,
+				Text:      update.Message.Text,
+				MessageID: update.Message.MessageID,
 			}
 		} else if update.CallbackQuery != nil {
-			// Respond to the callback query, telling Telegram to show the user
-			// a message with the data received.
 			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 			if _, err := b.botAPI.Request(callback); err != nil {
 				panic(err)
 			}
-
-			// And finally, send a message containing the data received.
-			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
-			if _, err := b.botAPI.Send(msg); err != nil {
-				panic(err)
+			pm = ProcessingMessage{
+				UserID:    update.CallbackQuery.Message.Chat.ID,
+				ChatID:    update.CallbackQuery.Message.Chat.ID,
+				Text:      callback.Text,
+				MessageID: update.CallbackQuery.Message.MessageID,
 			}
+		}
+
+		msg, err := b.processUserMessage(&pm)
+		if err != nil {
+			log.Fatalf("got error, while processing message: %v", err)
+		}
+
+		// Send the message.
+		if _, err := b.botAPI.Send(msg); err != nil {
+			// todo не паниковать
+			log.Printf("error while sending message: %v\n", err)
 		}
 	}
 	log.Println("exiting loop")
 }
 
-func (b *Bot) getOrCreateCBState(userID int) UserState {
+func (b *Bot) getOrCreateState(userID int64) UserState {
 	if s, ok := b.states[userID]; ok {
 		return s
 	}
@@ -136,9 +142,9 @@ func (b *Bot) getOrCreateCBState(userID int) UserState {
 	return s
 }
 
-func (b *Bot) processUserMessage(msg *tgbotapi.Message) (tgbotapi.Chattable, error) {
-	userID := msg.From.ID
-	state := b.getOrCreateCBState(userID)
+func (b *Bot) processUserMessage(msg *ProcessingMessage) (tgbotapi.Chattable, error) {
+	userID := msg.UserID
+	state := b.getOrCreateState(userID)
 
 	processor, err := b.findProcessor(state.State)
 	if err != nil {
@@ -153,14 +159,8 @@ func (b *Bot) processUserMessage(msg *tgbotapi.Message) (tgbotapi.Chattable, err
 }
 
 func (b *Bot) findProcessor(state State) (Processor, error) {
-	switch state {
-	case MainMenu:
-		return &MainProcessor{}, nil
-	case Cb5:
-		return &CbProcessor{Level: 5}, nil
-	case Cb6:
-		return &CbProcessor{Level: 6}, nil
-	default:
-		return nil, errors.New("not found")
+	if p, ok := b.processors[state]; ok {
+		return p, nil
 	}
+	return nil, errors.New("not found")
 }
