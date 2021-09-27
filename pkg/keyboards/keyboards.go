@@ -35,7 +35,7 @@ const (
 	Dec             = "Декабрь"
 )
 
-var HelloKeyboard = tgbotapi.NewReplyKeyboard(
+var MainMenuKeyboard = tgbotapi.NewReplyKeyboard(
 	tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton(Cb5),
 		tgbotapi.NewKeyboardButton(Cb6),
@@ -43,7 +43,7 @@ var HelloKeyboard = tgbotapi.NewReplyKeyboard(
 	),
 )
 
-var NumericKeyboard = tgbotapi.NewInlineKeyboardMarkup(
+var AddDropInlineKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData(AncientShard, AncientShard),
 		tgbotapi.NewInlineKeyboardButtonData(VoidShard, VoidShard),

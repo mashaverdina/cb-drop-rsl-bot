@@ -28,12 +28,12 @@ func (p *MainProcessor) Handle(state UserState, msg *ProcessingMessage) (UserSta
 	case keyboards.Cb5:
 		state.State = Cb5
 		resp := tgbotapi.NewMessage(msg.ChatID, "Что упало с 5го КБ?")
-		resp.ReplyMarkup = keyboards.NumericKeyboard
+		resp.ReplyMarkup = keyboards.AddDropInlineKeyboard
 		return state, resp, nil
 	case keyboards.Cb6:
 		state.State = Cb6
 		resp := tgbotapi.NewMessage(msg.ChatID, "Что упало с 6го КБ?")
-		resp.ReplyMarkup = keyboards.NumericKeyboard
+		resp.ReplyMarkup = keyboards.AddDropInlineKeyboard
 		return state, resp, nil
 	case keyboards.Reject:
 		state.State = MainMenu
@@ -43,7 +43,7 @@ func (p *MainProcessor) Handle(state UserState, msg *ProcessingMessage) (UserSta
 	}
 
 	resp := tgbotapi.NewMessage(msg.ChatID, "Привет")
-	resp.ReplyMarkup = keyboards.HelloKeyboard
+	resp.ReplyMarkup = keyboards.MainMenuKeyboard
 	return state, resp, nil
 }
 
@@ -86,7 +86,7 @@ func (p *CbProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState
 	}
 
 	resp := tgbotapi.NewEditMessageText(msg.ChatID, msg.MessageID, p.msgFromStat(cbState))
-	resp.ReplyMarkup = &keyboards.NumericKeyboard
+	resp.ReplyMarkup = &keyboards.AddDropInlineKeyboard
 	resp.ParseMode = "markdown"
 	p.stats[state.UserID] = cbState
 	return state, resp, nil
