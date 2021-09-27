@@ -30,11 +30,11 @@ type CbUserState struct {
 	UserID     int64
 	LastUpdate time.Time
 
-	AncientShard int
-	VoidShard    int
-	SacredShard  int
-	EpicTome     int
-	LegTome      int
+	AncientShard int `json:"AncientShard"`
+	VoidShard    int `json:"VoidShard"`
+	SacredShard  int `json:"SacredShard"`
+	EpicTome     int `json:"EpicTome"`
+	LegTome      int `json:"LegTome"`
 }
 
 func NewCbUserState(userID int64) CbUserState {

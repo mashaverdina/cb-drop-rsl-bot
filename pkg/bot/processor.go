@@ -2,6 +2,7 @@ package rslbot
 
 import (
 	"fmt"
+	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -9,9 +10,10 @@ import (
 )
 
 type ProcessingMessage struct {
-	UserID int64
-	ChatID int64
-	Text   string
+	UserID    int64
+	ChatID    int64
+	MessageID int
+	Text      string
 }
 
 type Processor interface {
@@ -64,11 +66,14 @@ func (p *CbProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState
 		state.State = MainMenu
 		resp := tgbotapi.NewMessage(msg.ChatID, "До встречи")
 		resp.ReplyMarkup = tgbotapi.NewRemoveKeyboard(false)
+		p.stats[state.UserID] = NewCbUserState(state.UserID)
 		return state, resp, nil
+	case keyboards.Clear:
+		p.stats[state.UserID] = NewCbUserState(state.UserID)
 	case keyboards.LegTome:
 		p.increment(&cbState.LegTome)
 	case keyboards.AncientShard:
-		p.increment(&cbState.SacredShard)
+		p.increment(&cbState.AncientShard)
 	case keyboards.VoidShard:
 		p.increment(&cbState.VoidShard)
 	case keyboards.SacredShard:
@@ -80,14 +85,26 @@ func (p *CbProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState
 		return state, resp, nil
 	}
 
-	resp := tgbotapi.NewMessage(msg.ChatID, msgFromStat(cbState))
+	resp := tgbotapi.NewEditMessageText(msg.ChatID, msg.MessageID, p.msgFromStat(cbState))
+	resp.ReplyMarkup = &keyboards.NumericKeyboard
+	resp.ParseMode = "markdown"
 	p.stats[state.UserID] = cbState
 	return state, resp, nil
 
 }
 
-func msgFromStat(state CbUserState) string {
-	return fmt.Sprintf("Итого:\n - Синих шародов - %d\n - Лег книжек - %d", state.SacredShard, state.LegTome)
+func (p *CbProcessor) msgFromStat(state CbUserState) string {
+	lines := []string{
+		fmt.Sprintf("Стата по *%d КБ*", p.level),
+	}
+
+	lines = append(lines, fmt.Sprintf("%s -- %d", keyboards.AncientShard, state.AncientShard))
+	lines = append(lines, fmt.Sprintf("%s -- %d", keyboards.VoidShard, state.VoidShard))
+	lines = append(lines, fmt.Sprintf("%s -- %d", keyboards.SacredShard, state.SacredShard))
+	lines = append(lines, fmt.Sprintf("%s -- %d", keyboards.EpicTome, state.EpicTome))
+	lines = append(lines, fmt.Sprintf("%s -- %d", keyboards.LegTome, state.LegTome))
+
+	return strings.Join(lines, "\n")
 }
 
 func (p *CbProcessor) getOrCreateStats(userID int64) CbUserState {

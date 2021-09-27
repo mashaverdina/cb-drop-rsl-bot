@@ -101,9 +101,10 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 
 		if update.Message != nil {
 			pm = ProcessingMessage{
-				UserID: update.Message.Chat.ID,
-				ChatID: update.Message.Chat.ID,
-				Text:   update.Message.Text,
+				UserID:    update.Message.Chat.ID,
+				ChatID:    update.Message.Chat.ID,
+				Text:      update.Message.Text,
+				MessageID: update.Message.MessageID,
 			}
 		} else if update.CallbackQuery != nil {
 			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
@@ -111,9 +112,10 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 				panic(err)
 			}
 			pm = ProcessingMessage{
-				UserID: update.CallbackQuery.Message.Chat.ID,
-				ChatID: update.CallbackQuery.Message.Chat.ID,
-				Text:   callback.Text,
+				UserID:    update.CallbackQuery.Message.Chat.ID,
+				ChatID:    update.CallbackQuery.Message.Chat.ID,
+				Text:      callback.Text,
+				MessageID: update.CallbackQuery.Message.MessageID,
 			}
 		}
 
@@ -125,7 +127,7 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 		// Send the message.
 		if _, err := b.botAPI.Send(msg); err != nil {
 			// todo не паниковать
-			panic(err)
+			log.Printf("error while sending message: %v\n", err)
 		}
 	}
 	log.Println("exiting loop")
