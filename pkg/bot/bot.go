@@ -38,14 +38,18 @@ func NewBot(botAPI *tgbotapi.BotAPI) *Bot {
 	}
 
 	bot.processors = map[State]Processor{
-		MainMenu: &MainProcessor{},
-		Cb5:      NewCbProcessor(5),
-		Cb6:      NewCbProcessor(6),
+		StateMainMenu: &MainProcessor{},
+		StateCb5:      NewCbProcessor(5),
+		StateCb6:      NewCbProcessor(6),
+		StateStats:    NewStatsProcessor(),
+		StateMonth:    NewMonthProcessor(),
 	}
 
-	bot.processors[MainMenu] = &MainProcessor{}
-	bot.processors[Cb5] = NewCbProcessor(5)
-	bot.processors[Cb6] = NewCbProcessor(6)
+	bot.processors[StateMainMenu] = &MainProcessor{}
+	bot.processors[StateCb5] = NewCbProcessor(5)
+	bot.processors[StateCb6] = NewCbProcessor(6)
+	bot.processors[StateStats] = NewStatsProcessor()
+	bot.processors[StateMonth] = NewMonthProcessor()
 	return bot
 
 }

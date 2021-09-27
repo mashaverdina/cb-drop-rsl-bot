@@ -26,19 +26,19 @@ type MainProcessor struct {
 func (p *MainProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
 	switch msg.Text {
 	case keyboards.Cb5:
-		state.State = Cb5
+		state.State = StateCb5
 		resp := tgbotapi.NewMessage(msg.ChatID, "Что упало с 5го КБ?")
 		resp.ReplyMarkup = keyboards.AddDropInlineKeyboard
 		return state, resp, nil
 	case keyboards.Cb6:
-		state.State = Cb6
+		state.State = StateCb6
 		resp := tgbotapi.NewMessage(msg.ChatID, "Что упало с 6го КБ?")
 		resp.ReplyMarkup = keyboards.AddDropInlineKeyboard
 		return state, resp, nil
-	case keyboards.Reject:
-		state.State = MainMenu
-		resp := tgbotapi.NewMessage(msg.ChatID, "До встречи")
-		resp.ReplyMarkup = tgbotapi.NewRemoveKeyboard(false)
+	case keyboards.Stats:
+		state.State = StateStats
+		resp := tgbotapi.NewMessage(msg.ChatID, "Что тебе показать?")
+		resp.ReplyMarkup = keyboards.StatsKeyboard
 		return state, resp, nil
 	}
 
@@ -63,13 +63,20 @@ func (p *CbProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState
 	cbState := p.getOrCreateStats(state.UserID)
 	switch msg.Text {
 	case keyboards.Reject:
-		state.State = MainMenu
+		state.State = StateMainMenu
 		resp := tgbotapi.NewMessage(msg.ChatID, "До встречи")
-		resp.ReplyMarkup = tgbotapi.NewRemoveKeyboard(false)
+		resp.ReplyMarkup = keyboards.MainMenuKeyboard
+		p.stats[state.UserID] = NewCbUserState(state.UserID)
+		return state, resp, nil
+	case keyboards.Approve:
+		state.State = StateMainMenu
+		// TODO: save to DB
+		resp := tgbotapi.NewMessage(msg.ChatID, "Записано")
+		resp.ReplyMarkup = keyboards.MainMenuKeyboard
 		p.stats[state.UserID] = NewCbUserState(state.UserID)
 		return state, resp, nil
 	case keyboards.Clear:
-		p.stats[state.UserID] = NewCbUserState(state.UserID)
+		cbState = NewCbUserState(state.UserID)
 	case keyboards.LegTome:
 		p.increment(&cbState.LegTome)
 	case keyboards.AncientShard:
@@ -118,4 +125,73 @@ func (p *CbProcessor) getOrCreateStats(userID int64) CbUserState {
 
 func (p *CbProcessor) increment(val *int) {
 	*val = *val + 1
+}
+
+type StatsProcessor struct {
+}
+
+func NewStatsProcessor() *StatsProcessor {
+	return &StatsProcessor{}
+}
+
+func (p *StatsProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
+	switch msg.Text {
+	case keyboards.Back:
+		state.State = StateStats
+		resp := tgbotapi.NewMessage(msg.ChatID, "До встречи")
+		resp.ReplyMarkup = keyboards.MainMenuKeyboard
+		return state, resp, nil
+	case keyboards.LastVoidShard:
+		state.State = StateMainMenu
+		// TODO: get last void shard info from DB
+		resp := tgbotapi.NewMessage(msg.ChatID, "Твой последний темный околок с КБ был аж")
+		resp.ReplyMarkup = keyboards.MainMenuKeyboard
+		return state, resp, nil
+	case keyboards.LastSacredShard:
+		state.State = StateMainMenu
+		// TODO: get last sacred shard info from DB
+		resp := tgbotapi.NewMessage(msg.ChatID, "Твой последний сакральный околок с КБ был аж")
+		resp.ReplyMarkup = keyboards.MainMenuKeyboard
+		return state, resp, nil
+	case keyboards.LastLegTome:
+		state.State = StateMainMenu
+		// TODO: get last leg tome info from DB
+		resp := tgbotapi.NewMessage(msg.ChatID, "Твой последний легендарный том с КБ был аж")
+		resp.ReplyMarkup = keyboards.MainMenuKeyboard
+		return state, resp, nil
+	case keyboards.MonthStats:
+		state.State = StateMonth
+		resp := tgbotapi.NewMessage(msg.ChatID, "Выбери месяц")
+		resp.ReplyMarkup = keyboards.ChooseMonthKeyboard
+		return state, resp, nil
+	default:
+		resp := tgbotapi.NewMessage(msg.ChatID, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)")
+		return state, resp, nil
+	}
+}
+
+type MonthProcessor struct {
+}
+
+func NewMonthProcessor() *StatsProcessor {
+	return &StatsProcessor{}
+}
+
+func (p *MonthProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
+	switch msg.Text {
+	case keyboards.Back:
+		state.State = StateMainMenu
+		resp := tgbotapi.NewMessage(msg.ChatID, "Что тебе показать?")
+		resp.ReplyMarkup = keyboards.StatsKeyboard
+		return state, resp, nil
+	case keyboards.Jan, keyboards.Feb, keyboards.Mar, keyboards.Apr, keyboards.May, keyboards.Jun, keyboards.Jul, keyboards.Aug, keyboards.Sep, keyboards.Oct, keyboards.Nov, keyboards.Dec:
+		state.State = StateMainMenu
+		// TODO: get stats for month from DB
+		resp := tgbotapi.NewMessage(msg.ChatID, "Вот твоя статистика")
+		resp.ReplyMarkup = keyboards.MainMenuKeyboard
+		return state, resp, nil
+	default:
+		resp := tgbotapi.NewMessage(msg.ChatID, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)")
+		return state, resp, nil
+	}
 }
