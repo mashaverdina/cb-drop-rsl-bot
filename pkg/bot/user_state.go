@@ -12,14 +12,14 @@ const (
 	Cb5      = "cb-5"
 )
 
-type UserCBState struct {
+type UserState struct {
 	UserID     int
 	LastUpdate time.Time
 	State      State
 }
 
-func NewUserState(userID int) UserCBState {
-	return UserCBState{
+func NewUserState(userID int) UserState {
+	return UserState{
 		UserID:     userID,
 		LastUpdate: time.Now(),
 		State:      MainMenu,

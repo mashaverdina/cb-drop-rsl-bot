@@ -8,33 +8,31 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-
-	keyboards "vkokarev.com/rslbot/pkg/keyboards"
 )
 
 type Bot struct {
-	ctx      context.Context
-	botAPI   *tgbotapi.BotAPI
-	cbStates map[int]UserCBState
-	cancel   context.CancelFunc
-	updates  tgbotapi.UpdatesChannel
-	done     chan interface{}
-	m        sync.Mutex
-	started  bool
-	stopped  bool
+	ctx     context.Context
+	botAPI  *tgbotapi.BotAPI
+	states  map[int]UserState
+	cancel  context.CancelFunc
+	updates tgbotapi.UpdatesChannel
+	done    chan interface{}
+	m       sync.Mutex
+	started bool
+	stopped bool
 }
 
 func NewBot(botAPI *tgbotapi.BotAPI) *Bot {
 	return &Bot{
-		ctx:      nil,
-		botAPI:   botAPI,
-		cbStates: make(map[int]UserCBState),
-		cancel:   nil,
-		updates:  nil,
-		done:     make(chan interface{}),
-		m:        sync.Mutex{},
-		started:  false,
-		stopped:  false,
+		ctx:     nil,
+		botAPI:  botAPI,
+		states:  make(map[int]UserState),
+		cancel:  nil,
+		updates: nil,
+		done:    make(chan interface{}),
+		m:       sync.Mutex{},
+		started: false,
+		stopped: false,
 	}
 }
 
@@ -88,23 +86,22 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 		if update.Message != nil {
 			// Construct a new message from the given chat ID and containing
 			// the text that we received.
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
+			// msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
 
 			// If the message was open, add a copy of our numeric keyboard.
-			switch update.Message.Text {
-			case "/start", "start":
-				msg.Text = "Выбирай действие"
-				msg.ReplyMarkup = keyboards.HelloKeyboard
-			// case "":
-			// 	msg.ReplyMarkup = keyboards.NumericKeyboard
-			case "/stop", "stop":
-				msg.Text = "Пока"
-				msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(false)
-			default:
-				if err := b.processUserMessage(update.Message); err != nil {
-					log.Fatalf("got error, while processing message: %v", err)
-				}
-
+			// switch update.Message.Text {
+			// case "/start", "start":
+			// 	msg.Text = "Выбирай действие"
+			// 	msg.ReplyMarkup = keyboards.HelloKeyboard
+			// // case "":
+			// // 	msg.ReplyMarkup = keyboards.NumericKeyboard
+			// case "/stop", "stop":
+			// 	msg.Text = "Пока"
+			// 	msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(false)
+			// default:
+			msg, err := b.processUserMessage(update.Message)
+			if err != nil {
+				log.Fatalf("got error, while processing message: %v", err)
 			}
 
 			// Send the message.
@@ -130,26 +127,40 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 	log.Println("exiting loop")
 }
 
-func (b *Bot) getOrCreateCBState(userID int) UserCBState {
-	if s, ok := b.cbStates[userID]; ok {
+func (b *Bot) getOrCreateCBState(userID int) UserState {
+	if s, ok := b.states[userID]; ok {
 		return s
 	}
 	s := NewUserState(userID)
-	b.cbStates[userID] = s
+	b.states[userID] = s
 	return s
 }
 
-func (b *Bot) processUserMessage(msg *tgbotapi.Message) error {
+func (b *Bot) processUserMessage(msg *tgbotapi.Message) (tgbotapi.Chattable, error) {
 	userID := msg.From.ID
 	state := b.getOrCreateCBState(userID)
 
 	processor, err := b.findProcessor(state.State)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return processor.Handle(msg)
+	newState, response, err := processor.Handle(state, msg)
+	if err != nil {
+		return nil, err
+	}
+	b.states[userID] = newState
+	return response, nil
 }
 
 func (b *Bot) findProcessor(state State) (Processor, error) {
-	return nil, errors.New("not found")
+	switch state {
+	case MainMenu:
+		return &MainProcessor{}, nil
+	case Cb5:
+		return &CbProcessor{Level: 5}, nil
+	case Cb6:
+		return &CbProcessor{Level: 6}, nil
+	default:
+		return nil, errors.New("not found")
+	}
 }
