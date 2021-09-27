@@ -1,2 +1,2 @@
-# cb_drop_rsl_bot
+# CB Drop RSL Bot
 Telegram bot for tracking Clan Boss drop in Raid Shadow Legends
