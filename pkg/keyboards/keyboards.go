@@ -5,17 +5,17 @@ import (
 )
 
 const (
-	Cb5          = "5 КБ"
-	Cb6          = "6 КБ"
-	Stats        = "Стата"
-	Approve      = "OK"
-	Reject       = "Закрыть"
-	Clear        = "Ввести заново"
-	AncientShard = "Древний осколок"
-	VoidShard    = "Темный осколок"
-	SacredShard  = "Сакральный осколок"
-	EpicTome     = "Эпический том"
-	LegTome      = "Легендарный том"
+	Cb5          = "😈 Добавить дроп с 5 КБ"
+	Cb6          = "👹 Добавить дроп с 6 КБ"
+	Stats        = "📈 Посмотреть статистику"
+	Approve      = "✅ OK"
+	Reject       = "❌ Закрыть"
+	Clear        = "🔄 Ввести заново"
+	AncientShard = "💙 Древний осколок"
+	VoidShard    = "💜 Темный осколок"
+	SacredShard  = "💛 Сакральный осколок"
+	EpicTome     = "📘 Эпический том"
+	LegTome      = "📙 Легендарный том"
 )
 
 var HelloKeyboard = tgbotapi.NewReplyKeyboard(
@@ -23,10 +23,6 @@ var HelloKeyboard = tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButton(Cb5),
 		tgbotapi.NewKeyboardButton(Cb6),
 		tgbotapi.NewKeyboardButton(Stats),
-	),
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton(Approve),
-		tgbotapi.NewKeyboardButton(Reject),
 	),
 )
 
