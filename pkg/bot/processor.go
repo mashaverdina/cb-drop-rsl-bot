@@ -137,7 +137,7 @@ func NewStatsProcessor() *StatsProcessor {
 func (p *StatsProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
 	switch msg.Text {
 	case keyboards.Back:
-		state.State = StateStats
+		state.State = StateMainMenu
 		resp := tgbotapi.NewMessage(msg.ChatID, "До встречи")
 		resp.ReplyMarkup = keyboards.MainMenuKeyboard
 		return state, resp, nil
@@ -173,21 +173,21 @@ func (p *StatsProcessor) Handle(state UserState, msg *ProcessingMessage) (UserSt
 type MonthProcessor struct {
 }
 
-func NewMonthProcessor() *StatsProcessor {
-	return &StatsProcessor{}
+func NewMonthProcessor() *MonthProcessor {
+	return &MonthProcessor{}
 }
 
 func (p *MonthProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
 	switch msg.Text {
 	case keyboards.Back:
-		state.State = StateMainMenu
+		state.State = StateStats
 		resp := tgbotapi.NewMessage(msg.ChatID, "Что тебе показать?")
 		resp.ReplyMarkup = keyboards.StatsKeyboard
 		return state, resp, nil
 	case keyboards.Jan, keyboards.Feb, keyboards.Mar, keyboards.Apr, keyboards.May, keyboards.Jun, keyboards.Jul, keyboards.Aug, keyboards.Sep, keyboards.Oct, keyboards.Nov, keyboards.Dec:
 		state.State = StateMainMenu
 		// TODO: get stats for month from DB
-		resp := tgbotapi.NewMessage(msg.ChatID, "Вот твоя статистика")
+		resp := tgbotapi.NewMessage(msg.ChatID, fmt.Sprintf("Вот твоя статистика за %s:", msg.Text))
 		resp.ReplyMarkup = keyboards.MainMenuKeyboard
 		return state, resp, nil
 	default:
