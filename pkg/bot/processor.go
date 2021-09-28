@@ -27,6 +27,10 @@ var monthMap = map[string]time.Month{
 	keyboards.Dec: time.December,
 }
 
+const (
+	dateFormat = "02.01.2006"
+)
+
 type ProcessingMessage struct {
 	UserID    int64
 	ChatID    int64
@@ -259,9 +263,9 @@ func timePast(t *time.Time) string {
 	}
 	delta := time.Now().Sub(*t)
 	if delta.Hours() < 24 {
-		return "сегодня"
+		return t.Format(dateFormat) + " (сегодня)"
 	}
-	return strconv.FormatInt(int64(delta.Hours()/24), 10) + " д. назад"
+	return t.Format(dateFormat) + " (" + strconv.FormatInt(int64(delta.Hours()/24), 10) + " д. назад)"
 }
 
 func mothInterval(month string) (time.Time, time.Time) {
