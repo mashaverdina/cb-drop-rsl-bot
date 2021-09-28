@@ -143,12 +143,14 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 			if update.Message != nil && update.Message.Command() != "" {
 				b.processCommand(pm.User, update.Message.Command(), update.Message.CommandArguments())
 			} else {
-				msg, err := b.processUserMessage(&pm)
+				msgs, err := b.processUserMessage(&pm)
 				if err != nil {
 					log.Fatalf("got error, while processing message: %v", err)
 				}
-				if _, err := b.botAPI.Send(msg); err != nil {
-					log.Printf("error while sending message: %v\n", err)
+				for _, msg := range msgs {
+					if _, err := b.botAPI.Send(msg); err != nil {
+						log.Printf("error while sending message: %v\n", err)
+					}
 				}
 			}
 		}
@@ -165,7 +167,7 @@ func (b *Bot) getOrCreateState(userID int64) UserState {
 	return s
 }
 
-func (b *Bot) processUserMessage(msg *ProcessingMessage) (tgbotapi.Chattable, error) {
+func (b *Bot) processUserMessage(msg *ProcessingMessage) ([]tgbotapi.Chattable, error) {
 	userID := msg.User.UserID
 	state := b.getOrCreateState(userID)
 
