@@ -239,7 +239,7 @@ func (p *MonthProcessor) Handle(ctx context.Context, state UserState, msg *Proce
 		state.State = StateMainMenu
 		// TODO: get stats for month from DB
 		from, to := mothInterval(msg.Text)
-		monthStat, err := p.cbStatStorage.UserStat(ctx, msg.User.UserID, []int{5, 6}, from, to)
+		monthStat, err := p.cbStatStorage.UserStatCombined(ctx, msg.User.UserID, []int{5, 6}, from, to)
 		var replyMsg = ""
 		if err != nil {
 			replyMsg = "Статистики пока нет"

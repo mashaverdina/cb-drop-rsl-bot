@@ -75,7 +75,7 @@ func (s *CbStatStorage) LastResource(ctx context.Context, userID int64, level in
 	return &result.Time, nil
 }
 
-func (s *CbStatStorage) UserStat(ctx context.Context, userID int64, levels []int, from time.Time, to time.Time) (CbUserState, error) {
+func (s *CbStatStorage) UserStatCombined(ctx context.Context, userID int64, levels []int, from time.Time, to time.Time) (CbUserState, error) {
 	state := &CbUserState{UserID: userID}
 	err := s.pg.ExecuteInTransaction(hasql.Primary, func(db *gorm.DB) error {
 		rows, err := db.Raw("select sum(ancient_shard) as ancient_shard, sum(void_shard) as void_shard, sum(sacred_shard) as sacred_shard, sum(epic_tome) as epic_tome, sum(leg_tome) as leg_tome from cb_user_states where user_id = ? and level in ? and related_to >= ? and related_to <= ?", userID, levels, from, to).Rows()
@@ -92,4 +92,18 @@ func (s *CbStatStorage) UserStat(ctx context.Context, userID int64, levels []int
 		return CbUserState{}, err
 	}
 	return *state, nil
+}
+
+func (s *CbStatStorage) UserStat(ctx context.Context, userID int64, levels []int, from time.Time, to time.Time) ([]CbUserState, error) {
+	states := make([]CbUserState, 0)
+	err := s.pg.ExecuteInTransaction(hasql.Primary, func(db *gorm.DB) error {
+		return db.Model(&CbUserState{}).
+			Select("*").
+			Where("user_id = ? and level in ? and related_to >= ? and related_to <= ?", userID, levels, from, to).
+			Scan(&states).
+			Order("related_to").
+			Error
+	})
+
+	return states, err
 }
