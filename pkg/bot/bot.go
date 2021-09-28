@@ -96,41 +96,39 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 		case <-b.ctx.Done():
 			b.done <- true
 			return
-		case upd := <-updates:
-			go func(update tgbotapi.Update) {
-				pm := ProcessingMessage{}
+		case update := <-updates:
+			pm := ProcessingMessage{}
 
-				if update.Message != nil {
-					pm = ProcessingMessage{
-						UserID:    update.Message.Chat.ID,
-						ChatID:    update.Message.Chat.ID,
-						Text:      update.Message.Text,
-						MessageID: update.Message.MessageID,
-					}
-				} else if update.CallbackQuery != nil {
-					callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-					if _, err := b.botAPI.Request(callback); err != nil {
-						panic(err)
-					}
-					pm = ProcessingMessage{
-						UserID:    update.CallbackQuery.Message.Chat.ID,
-						ChatID:    update.CallbackQuery.Message.Chat.ID,
-						Text:      callback.Text,
-						MessageID: update.CallbackQuery.Message.MessageID,
-					}
+			if update.Message != nil {
+				pm = ProcessingMessage{
+					UserID:    update.Message.Chat.ID,
+					ChatID:    update.Message.Chat.ID,
+					Text:      update.Message.Text,
+					MessageID: update.Message.MessageID,
 				}
+			} else if update.CallbackQuery != nil {
+				callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
+				if _, err := b.botAPI.Request(callback); err != nil {
+					panic(err)
+				}
+				pm = ProcessingMessage{
+					UserID:    update.CallbackQuery.Message.Chat.ID,
+					ChatID:    update.CallbackQuery.Message.Chat.ID,
+					Text:      callback.Text,
+					MessageID: update.CallbackQuery.Message.MessageID,
+				}
+			}
 
-				msg, err := b.processUserMessage(&pm)
-				if err != nil {
-					log.Fatalf("got error, while processing message: %v", err)
-				}
+			msg, err := b.processUserMessage(&pm)
+			if err != nil {
+				log.Fatalf("got error, while processing message: %v", err)
+			}
 
-				// Send the message.
-				if _, err := b.botAPI.Send(msg); err != nil {
-					// todo не паниковать
-					log.Printf("error while sending message: %v\n", err)
-				}
-			}(upd)
+			// Send the message.
+			if _, err := b.botAPI.Send(msg); err != nil {
+				// todo не паниковать
+				log.Printf("error while sending message: %v\n", err)
+			}
 		}
 	}
 	log.Println("exiting loop")
