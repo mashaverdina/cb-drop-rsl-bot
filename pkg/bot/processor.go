@@ -28,7 +28,7 @@ var monthMap = map[string]time.Month{
 }
 
 type ProcessingMessage struct {
-	UserID    int64
+	User      User
 	ChatID    int64
 	MessageID int
 	Text      string
@@ -166,11 +166,11 @@ func NewStatsProcessor(cbStatStorage *CbStatStorage) *StatsProcessor {
 }
 
 func (p *StatsProcessor) LastStat(ctx context.Context, msg *ProcessingMessage, resource string, header string) (tgbotapi.Chattable, error) {
-	lastFrom5, err := p.cbStatStorage.LastResource(ctx, msg.UserID, 5, resource)
+	lastFrom5, err := p.cbStatStorage.LastResource(ctx, msg.User.UserID, 5, resource)
 	if err != nil {
 		return nil, err
 	}
-	lastFrom6, err := p.cbStatStorage.LastResource(ctx, msg.UserID, 6, resource)
+	lastFrom6, err := p.cbStatStorage.LastResource(ctx, msg.User.UserID, 6, resource)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +235,7 @@ func (p *MonthProcessor) Handle(ctx context.Context, state UserState, msg *Proce
 		state.State = StateMainMenu
 		// TODO: get stats for month from DB
 		from, to := mothInterval(msg.Text)
-		monthStat, err := p.cbStatStorage.UserStat(ctx, msg.UserID, []int{5, 6}, from, to)
+		monthStat, err := p.cbStatStorage.UserStat(ctx, msg.User.UserID, []int{5, 6}, from, to)
 		var replyMsg = ""
 		if err != nil {
 			replyMsg = "Статистики пока нет"
