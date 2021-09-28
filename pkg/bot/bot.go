@@ -13,16 +13,17 @@ import (
 )
 
 type Bot struct {
-	ctx        context.Context
-	botAPI     *tgbotapi.BotAPI
-	states     map[int64]UserState
-	processors map[State]Processor
-	cancel     context.CancelFunc
-	updates    tgbotapi.UpdatesChannel
-	done       chan interface{}
-	m          sync.Mutex
-	started    bool
-	stopped    bool
+	ctx         context.Context
+	botAPI      *tgbotapi.BotAPI
+	states      map[int64]UserState
+	processors  map[State]Processor
+	cancel      context.CancelFunc
+	updates     tgbotapi.UpdatesChannel
+	userStorage *UserStorage
+	done        chan interface{}
+	m           sync.Mutex
+	started     bool
+	stopped     bool
 }
 
 func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient) *Bot {
@@ -47,6 +48,7 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient) *Bot {
 		StateStats:    NewStatsProcessor(cbStatStorage),
 		StateMonth:    NewMonthProcessor(cbStatStorage),
 	}
+	bot.userStorage = NewUserStorage(pg)
 
 	return bot
 
@@ -98,10 +100,24 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 			return
 		case update := <-updates:
 			pm := ProcessingMessage{}
-
 			if update.Message != nil {
+				user, err := b.userStorage.Load(b.ctx, update.Message.Chat.ID)
+				if err != nil {
+					user, err = b.userStorage.Create(b.ctx, &User{
+						UserID:       update.Message.Chat.ID,
+						FirstName:    update.Message.From.FirstName,
+						LastName:     update.Message.From.LastName,
+						UserName:     update.Message.From.UserName,
+						LanguageCode: update.Message.From.LanguageCode,
+						Clan:         "",
+						Nickname:     "",
+					})
+					if err != nil {
+						user = User{UserID: update.Message.Chat.ID}
+					}
+				}
 				pm = ProcessingMessage{
-					UserID:    update.Message.Chat.ID,
+					User:      user,
 					ChatID:    update.Message.Chat.ID,
 					Text:      update.Message.Text,
 					MessageID: update.Message.MessageID,
@@ -111,8 +127,12 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 				if _, err := b.botAPI.Request(callback); err != nil {
 					panic(err)
 				}
+				user, err := b.userStorage.Load(b.ctx, update.CallbackQuery.Message.Chat.ID)
+				if err != nil {
+					user = User{UserID: update.CallbackQuery.Message.Chat.ID}
+				}
 				pm = ProcessingMessage{
-					UserID:    update.CallbackQuery.Message.Chat.ID,
+					User:      user,
 					ChatID:    update.CallbackQuery.Message.Chat.ID,
 					Text:      callback.Text,
 					MessageID: update.CallbackQuery.Message.MessageID,
@@ -144,7 +164,7 @@ func (b *Bot) getOrCreateState(userID int64) UserState {
 }
 
 func (b *Bot) processUserMessage(msg *ProcessingMessage) (tgbotapi.Chattable, error) {
-	userID := msg.UserID
+	userID := msg.User.UserID
 	state := b.getOrCreateState(userID)
 
 	processor, err := b.findProcessor(state.State)
