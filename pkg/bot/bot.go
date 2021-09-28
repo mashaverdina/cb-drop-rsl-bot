@@ -8,6 +8,8 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
+	"vkokarev.com/rslbot/pkg/pg"
 )
 
 type Bot struct {
@@ -23,7 +25,7 @@ type Bot struct {
 	stopped    bool
 }
 
-func NewBot(botAPI *tgbotapi.BotAPI) *Bot {
+func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient) *Bot {
 	bot := &Bot{
 		ctx:        nil,
 		botAPI:     botAPI,
@@ -37,19 +39,15 @@ func NewBot(botAPI *tgbotapi.BotAPI) *Bot {
 		stopped:    false,
 	}
 
+	cbStatStorage := NewCbStatStorage(pg)
 	bot.processors = map[State]Processor{
 		StateMainMenu: &MainProcessor{},
-		StateCb5:      NewCbProcessor(5),
-		StateCb6:      NewCbProcessor(6),
-		StateStats:    NewStatsProcessor(),
-		StateMonth:    NewMonthProcessor(),
+		StateCb5:      NewCbProcessor(5, cbStatStorage),
+		StateCb6:      NewCbProcessor(6, cbStatStorage),
+		StateStats:    NewStatsProcessor(cbStatStorage),
+		StateMonth:    NewMonthProcessor(cbStatStorage),
 	}
 
-	bot.processors[StateMainMenu] = &MainProcessor{}
-	bot.processors[StateCb5] = NewCbProcessor(5)
-	bot.processors[StateCb6] = NewCbProcessor(6)
-	bot.processors[StateStats] = NewStatsProcessor()
-	bot.processors[StateMonth] = NewMonthProcessor()
 	return bot
 
 }
@@ -93,45 +91,46 @@ func (b *Bot) Stop(timeout time.Duration) error {
 
 func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 	log.Println("starting bot loop")
-	for update := range updates {
+	for {
 		select {
 		case <-b.ctx.Done():
 			b.done <- true
 			return
-		default:
-		}
+		case upd := <-updates:
+			go func(update tgbotapi.Update) {
+				pm := ProcessingMessage{}
 
-		pm := ProcessingMessage{}
+				if update.Message != nil {
+					pm = ProcessingMessage{
+						UserID:    update.Message.Chat.ID,
+						ChatID:    update.Message.Chat.ID,
+						Text:      update.Message.Text,
+						MessageID: update.Message.MessageID,
+					}
+				} else if update.CallbackQuery != nil {
+					callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
+					if _, err := b.botAPI.Request(callback); err != nil {
+						panic(err)
+					}
+					pm = ProcessingMessage{
+						UserID:    update.CallbackQuery.Message.Chat.ID,
+						ChatID:    update.CallbackQuery.Message.Chat.ID,
+						Text:      callback.Text,
+						MessageID: update.CallbackQuery.Message.MessageID,
+					}
+				}
 
-		if update.Message != nil {
-			pm = ProcessingMessage{
-				UserID:    update.Message.Chat.ID,
-				ChatID:    update.Message.Chat.ID,
-				Text:      update.Message.Text,
-				MessageID: update.Message.MessageID,
-			}
-		} else if update.CallbackQuery != nil {
-			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-			if _, err := b.botAPI.Request(callback); err != nil {
-				panic(err)
-			}
-			pm = ProcessingMessage{
-				UserID:    update.CallbackQuery.Message.Chat.ID,
-				ChatID:    update.CallbackQuery.Message.Chat.ID,
-				Text:      callback.Text,
-				MessageID: update.CallbackQuery.Message.MessageID,
-			}
-		}
+				msg, err := b.processUserMessage(&pm)
+				if err != nil {
+					log.Fatalf("got error, while processing message: %v", err)
+				}
 
-		msg, err := b.processUserMessage(&pm)
-		if err != nil {
-			log.Fatalf("got error, while processing message: %v", err)
-		}
-
-		// Send the message.
-		if _, err := b.botAPI.Send(msg); err != nil {
-			// todo не паниковать
-			log.Printf("error while sending message: %v\n", err)
+				// Send the message.
+				if _, err := b.botAPI.Send(msg); err != nil {
+					// todo не паниковать
+					log.Printf("error while sending message: %v\n", err)
+				}
+			}(upd)
 		}
 	}
 	log.Println("exiting loop")
@@ -154,7 +153,7 @@ func (b *Bot) processUserMessage(msg *ProcessingMessage) (tgbotapi.Chattable, er
 	if err != nil {
 		return nil, err
 	}
-	newState, response, err := processor.Handle(state, msg)
+	newState, response, err := processor.Handle(b.ctx, state, msg)
 	if err != nil {
 		return nil, err
 	}

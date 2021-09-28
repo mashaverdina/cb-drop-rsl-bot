@@ -1,13 +1,31 @@
 package rslbot
 
 import (
+	"context"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"vkokarev.com/rslbot/pkg/keyboards"
 )
+
+var monthMap = map[string]time.Month{
+	keyboards.Jan: time.January,
+	keyboards.Feb: time.February,
+	keyboards.Mar: time.March,
+	keyboards.Apr: time.April,
+	keyboards.May: time.May,
+	keyboards.Jun: time.June,
+	keyboards.Jul: time.July,
+	keyboards.Aug: time.August,
+	keyboards.Sep: time.September,
+	keyboards.Oct: time.October,
+	keyboards.Nov: time.November,
+	keyboards.Dec: time.December,
+}
 
 type ProcessingMessage struct {
 	UserID    int64
@@ -17,13 +35,13 @@ type ProcessingMessage struct {
 }
 
 type Processor interface {
-	Handle(state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error)
+	Handle(ctx context.Context, state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error)
 }
 
 type MainProcessor struct {
 }
 
-func (p *MainProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
+func (p *MainProcessor) Handle(ctx context.Context, state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
 	switch msg.Text {
 	case keyboards.Cb5:
 		state.State = StateCb5
@@ -48,35 +66,44 @@ func (p *MainProcessor) Handle(state UserState, msg *ProcessingMessage) (UserSta
 }
 
 type CbProcessor struct {
-	level int
-	stats map[int64]CbUserState
+	level   int
+	stats   map[int64]CbUserState
+	storage *CbStatStorage
 }
 
-func NewCbProcessor(level int) *CbProcessor {
+func NewCbProcessor(level int, storage *CbStatStorage) *CbProcessor {
 	return &CbProcessor{
-		level: level,
-		stats: make(map[int64]CbUserState),
+		level:   level,
+		stats:   make(map[int64]CbUserState),
+		storage: storage,
 	}
 }
 
-func (p *CbProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
+func (p *CbProcessor) Handle(ctx context.Context, state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
 	cbState := p.getOrCreateStats(state.UserID)
 	switch msg.Text {
 	case keyboards.Reject:
 		state.State = StateMainMenu
 		resp := tgbotapi.NewMessage(msg.ChatID, "До встречи")
 		resp.ReplyMarkup = keyboards.MainMenuKeyboard
-		p.stats[state.UserID] = NewCbUserState(state.UserID)
+		// p.stats[state.UserID] = NewCbUserState(state.UserID)
+		delete(p.stats, state.UserID)
 		return state, resp, nil
 	case keyboards.Approve:
 		state.State = StateMainMenu
-		// TODO: save to DB
+
+		cbState := p.stats[state.UserID]
+		err := p.storage.Save(ctx, &cbState)
+		if err != nil {
+			return UserState{}, nil, err
+		}
+
 		resp := tgbotapi.NewMessage(msg.ChatID, "Записано")
 		resp.ReplyMarkup = keyboards.MainMenuKeyboard
-		p.stats[state.UserID] = NewCbUserState(state.UserID)
+		p.stats[state.UserID] = NewCbUserState(state.UserID, p.level)
 		return state, resp, nil
 	case keyboards.Clear:
-		cbState = NewCbUserState(state.UserID)
+		cbState = NewCbUserState(state.UserID, p.level)
 	case keyboards.LegTome:
 		p.increment(&cbState.LegTome)
 	case keyboards.AncientShard:
@@ -92,7 +119,7 @@ func (p *CbProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState
 		return state, resp, nil
 	}
 
-	resp := tgbotapi.NewEditMessageText(msg.ChatID, msg.MessageID, p.msgFromStat(cbState))
+	resp := tgbotapi.NewEditMessageText(msg.ChatID, msg.MessageID, msgFromStat(cbState, p.level))
 	resp.ReplyMarkup = &keyboards.AddDropInlineKeyboard
 	resp.ParseMode = "markdown"
 	p.stats[state.UserID] = cbState
@@ -100,9 +127,10 @@ func (p *CbProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState
 
 }
 
-func (p *CbProcessor) msgFromStat(state CbUserState) string {
-	lines := []string{
-		fmt.Sprintf("Стата по *%d КБ*", p.level),
+func msgFromStat(state CbUserState, level int) string {
+	lines := []string{}
+	if level > 0 {
+		lines = append(lines, fmt.Sprintf("Стата по *%d КБ*", level))
 	}
 
 	lines = append(lines, fmt.Sprintf("%s -- %d", keyboards.AncientShard, state.AncientShard))
@@ -115,10 +143,10 @@ func (p *CbProcessor) msgFromStat(state CbUserState) string {
 }
 
 func (p *CbProcessor) getOrCreateStats(userID int64) CbUserState {
-	if s, ok := p.stats[userID]; ok {
+	if s, ok := p.stats[userID]; ok && !s.Expired() {
 		return s
 	}
-	s := NewCbUserState(userID)
+	s := NewCbUserState(userID, p.level)
 	p.stats[userID] = s
 	return s
 }
@@ -128,13 +156,35 @@ func (p *CbProcessor) increment(val *int) {
 }
 
 type StatsProcessor struct {
+	cbStatStorage *CbStatStorage
 }
 
-func NewStatsProcessor() *StatsProcessor {
-	return &StatsProcessor{}
+func NewStatsProcessor(cbStatStorage *CbStatStorage) *StatsProcessor {
+	return &StatsProcessor{
+		cbStatStorage: cbStatStorage,
+	}
 }
 
-func (p *StatsProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
+func (p *StatsProcessor) LastStat(ctx context.Context, msg *ProcessingMessage, resource string, header string) (tgbotapi.Chattable, error) {
+	lastFrom5, err := p.cbStatStorage.LastResource(ctx, msg.UserID, 5, resource)
+	if err != nil {
+		return nil, err
+	}
+	lastFrom6, err := p.cbStatStorage.LastResource(ctx, msg.UserID, 6, resource)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := tgbotapi.NewMessage(msg.ChatID, strings.Join([]string{
+		header,
+		fmt.Sprintf("С 5го -- %s", timePast(lastFrom5)),
+		fmt.Sprintf("С 6го -- %s", timePast(lastFrom6)),
+	}, "\n"))
+	resp.ReplyMarkup = keyboards.MainMenuKeyboard
+	return resp, nil
+}
+
+func (p *StatsProcessor) Handle(ctx context.Context, state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
 	switch msg.Text {
 	case keyboards.Back:
 		state.State = StateMainMenu
@@ -143,22 +193,16 @@ func (p *StatsProcessor) Handle(state UserState, msg *ProcessingMessage) (UserSt
 		return state, resp, nil
 	case keyboards.LastVoidShard:
 		state.State = StateMainMenu
-		// TODO: get last void shard info from DB
-		resp := tgbotapi.NewMessage(msg.ChatID, "Твой последний темный околок с КБ был аж")
-		resp.ReplyMarkup = keyboards.MainMenuKeyboard
-		return state, resp, nil
+		resp, err := p.LastStat(ctx, msg, "void_shard", "Последний темный осколок")
+		return state, resp, err
 	case keyboards.LastSacredShard:
 		state.State = StateMainMenu
-		// TODO: get last sacred shard info from DB
-		resp := tgbotapi.NewMessage(msg.ChatID, "Твой последний сакральный околок с КБ был аж")
-		resp.ReplyMarkup = keyboards.MainMenuKeyboard
-		return state, resp, nil
+		resp, err := p.LastStat(ctx, msg, "sacred_shard", "Последний сакральный осколок")
+		return state, resp, err
 	case keyboards.LastLegTome:
 		state.State = StateMainMenu
-		// TODO: get last leg tome info from DB
-		resp := tgbotapi.NewMessage(msg.ChatID, "Твой последний легендарный том с КБ был аж")
-		resp.ReplyMarkup = keyboards.MainMenuKeyboard
-		return state, resp, nil
+		resp, err := p.LastStat(ctx, msg, "leg_tome", "Последний лег том")
+		return state, resp, err
 	case keyboards.MonthStats:
 		state.State = StateMonth
 		resp := tgbotapi.NewMessage(msg.ChatID, "Выбери месяц")
@@ -171,13 +215,16 @@ func (p *StatsProcessor) Handle(state UserState, msg *ProcessingMessage) (UserSt
 }
 
 type MonthProcessor struct {
+	cbStatStorage *CbStatStorage
 }
 
-func NewMonthProcessor() *MonthProcessor {
-	return &MonthProcessor{}
+func NewMonthProcessor(cbStatStorage *CbStatStorage) *MonthProcessor {
+	return &MonthProcessor{
+		cbStatStorage: cbStatStorage,
+	}
 }
 
-func (p *MonthProcessor) Handle(state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
+func (p *MonthProcessor) Handle(ctx context.Context, state UserState, msg *ProcessingMessage) (UserState, tgbotapi.Chattable, error) {
 	switch msg.Text {
 	case keyboards.Back:
 		state.State = StateStats
@@ -187,11 +234,44 @@ func (p *MonthProcessor) Handle(state UserState, msg *ProcessingMessage) (UserSt
 	case keyboards.Jan, keyboards.Feb, keyboards.Mar, keyboards.Apr, keyboards.May, keyboards.Jun, keyboards.Jul, keyboards.Aug, keyboards.Sep, keyboards.Oct, keyboards.Nov, keyboards.Dec:
 		state.State = StateMainMenu
 		// TODO: get stats for month from DB
-		resp := tgbotapi.NewMessage(msg.ChatID, fmt.Sprintf("Вот твоя статистика за %s:", msg.Text))
+		from, to := mothInterval(msg.Text)
+		monthStat, err := p.cbStatStorage.UserStat(ctx, msg.UserID, []int{5, 6}, from, to)
+		var replyMsg = ""
+		if err != nil {
+			replyMsg = "Статистики пока нет"
+		} else {
+			statText := msgFromStat(monthStat, 0)
+			replyMsg = fmt.Sprintf("Вот твоя статистика за %s:\n%s", msg.Text, statText)
+		}
+
+		resp := tgbotapi.NewMessage(msg.ChatID, replyMsg)
 		resp.ReplyMarkup = keyboards.MainMenuKeyboard
 		return state, resp, nil
 	default:
 		resp := tgbotapi.NewMessage(msg.ChatID, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)")
 		return state, resp, nil
 	}
+}
+
+func timePast(t *time.Time) string {
+	if t == nil {
+		return "никогда"
+	}
+	delta := time.Now().Sub(*t)
+	if delta.Hours() < 24 {
+		return "сегодня"
+	}
+	return strconv.FormatInt(int64(delta.Hours()/24), 10) + " д. назад"
+}
+
+func mothInterval(month string) (time.Time, time.Time) {
+	mn := monthMap[month]
+	cy, cm, _ := time.Now().Date()
+	if cm < mn {
+		cy = cy - 1
+	}
+
+	from := time.Date(cy, mn, 1, 0, 0, 0, 0, time.UTC)
+	to := from.AddDate(0, 1, -1)
+	return from, to
 }
