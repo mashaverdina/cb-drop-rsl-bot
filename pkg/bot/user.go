@@ -9,4 +9,6 @@ type User struct {
 
 	Clan     string
 	Nickname string
+
+	HasSudo bool
 }

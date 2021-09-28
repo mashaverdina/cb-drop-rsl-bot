@@ -5,6 +5,7 @@ CREATE TABLE users(
     user_name VARCHAR(128),
     language_code VARCHAR(16),
     clan VARCHAR(128),
-    nickname VARCHAR(128)
+    nickname VARCHAR(128),
+    has_sudo bool
 );
 

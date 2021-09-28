@@ -3,6 +3,7 @@ package rslbot
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -139,15 +140,16 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 				}
 			}
 
-			msg, err := b.processUserMessage(&pm)
-			if err != nil {
-				log.Fatalf("got error, while processing message: %v", err)
-			}
-
-			// Send the message.
-			if _, err := b.botAPI.Send(msg); err != nil {
-				// todo не паниковать
-				log.Printf("error while sending message: %v\n", err)
+			if update.Message != nil && update.Message.Command() != "" {
+				b.processCommand(pm.User, update.Message.Command(), update.Message.CommandArguments())
+			} else {
+				msg, err := b.processUserMessage(&pm)
+				if err != nil {
+					log.Fatalf("got error, while processing message: %v", err)
+				}
+				if _, err := b.botAPI.Send(msg); err != nil {
+					log.Printf("error while sending message: %v\n", err)
+				}
 			}
 		}
 	}
@@ -184,4 +186,63 @@ func (b *Bot) findProcessor(state State) (Processor, error) {
 		return p, nil
 	}
 	return nil, errors.New("not found")
+}
+
+func (b *Bot) processCommand(user User, command string, arguments string) {
+	switch command {
+	case "notifyall":
+		if !user.HasSudo {
+			b.NotifySudo(user)
+			return
+		}
+		if err := b.NotifyAll(b.ctx, arguments); err != nil {
+			msg := tgbotapi.NewMessage(user.UserID, fmt.Sprintf("Ошибка: %v", err))
+			_, _ = b.botAPI.Send(msg)
+		}
+	default:
+		b.NotifyNotFound(user)
+	}
+}
+
+func (b *Bot) NotifySudo(user User) {
+	msg := tgbotapi.NewMessage(user.UserID, "Для данной команды требуются супер права")
+	_, _ = b.botAPI.Send(msg)
+}
+
+func (b *Bot) NotifyNotFound(user User) {
+	msg := tgbotapi.NewMessage(user.UserID, "Команда не найдена")
+	_, _ = b.botAPI.Send(msg)
+}
+
+func (b *Bot) NotifyAll(ctx context.Context, arguments string) error {
+	workerCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	users := make(chan User)
+
+	for i := 0; i < 10; i++ {
+		go func() {
+			for {
+				select {
+				case u := <-users:
+					_, _ = b.botAPI.Send(tgbotapi.NewMessage(u.UserID, arguments))
+				case <-workerCtx.Done():
+					return
+				}
+			}
+		}()
+	}
+
+	allUsers, err := b.userStorage.All(b.ctx)
+	if err != nil {
+		return err
+	}
+	for _, user := range allUsers {
+		select {
+		case users <- user:
+		case <-ctx.Done():
+			return nil
+		}
+	}
+	return nil
 }
