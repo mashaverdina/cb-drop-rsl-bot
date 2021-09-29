@@ -10,11 +10,16 @@ type Message interface {
 
 type MessageFromChat interface {
 	Message
-	Message() int
+	MessageID() int
+}
+
+type MessageWithOldVersion interface {
+	MessageFromChat
+	Original() string
 }
 
 func EditTo(msg MessageFromChat, text string, markup *tgbotapi.InlineKeyboardMarkup) []tgbotapi.Chattable {
-	resp := tgbotapi.NewEditMessageText(msg.Chat(), msg.Message(), text)
+	resp := tgbotapi.NewEditMessageText(msg.Chat(), msg.MessageID(), text)
 	if markup != nil {
 		resp.ReplyMarkup = markup
 	}
@@ -30,9 +35,16 @@ func TextTo(msg Message, text string, markup interface{}) []tgbotapi.Chattable {
 	return []tgbotapi.Chattable{resp}
 }
 
+func DisableKeyboardAndSendNew(msg MessageWithOldVersion, text string, markup interface{}) []tgbotapi.Chattable {
+	return JoinResp(
+		EditTo(msg, msg.Original(), nil),
+		TextTo(msg, text, markup),
+	)
+}
+
 func RemoveAndSendNew(msg MessageFromChat, text string, markup interface{}) []tgbotapi.Chattable {
 	return JoinResp(
-		[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.Chat(), msg.Message())},
+		[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.Chat(), msg.MessageID())},
 		TextTo(msg, text, markup),
 	)
 }
