@@ -13,16 +13,20 @@ type Processor interface {
 }
 
 type ProcessingMessage struct {
-	User      entities.User
-	ChatID    int64
-	MessageID int
-	Text      string
+	User    entities.User
+	ChatID  int64
+	Text    string
+	Message *tgbotapi.Message
 }
 
 func (p ProcessingMessage) Chat() int64 {
 	return p.ChatID
 }
 
-func (p ProcessingMessage) Message() int {
-	return p.MessageID
+func (p ProcessingMessage) MessageID() int {
+	return p.Message.MessageID
+}
+
+func (p ProcessingMessage) Original() string {
+	return p.Message.Text
 }

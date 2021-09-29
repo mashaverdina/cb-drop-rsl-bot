@@ -36,11 +36,14 @@ func (p *StatsProcessor) LastStat(ctx context.Context, msg *ProcessingMessage, r
 		return nil, err
 	}
 
-	resp := chatutils.EditTo(msg, strings.Join([]string{
-		header,
-		fmt.Sprintf("С 5го -- %s", formatting.TimePast(lastFrom5)),
-		fmt.Sprintf("С 6го -- %s", formatting.TimePast(lastFrom6)),
-	}, "\n"), &keyboards.StatsKeyboard)
+	resp := chatutils.JoinResp(
+		chatutils.EditTo(msg, strings.Join([]string{
+			header,
+			fmt.Sprintf("С 5го -- %s", formatting.TimePast(lastFrom5)),
+			fmt.Sprintf("С 6го -- %s", formatting.TimePast(lastFrom6)),
+		}, "\n"), nil),
+		chatutils.TextTo(msg, "Что тебе показать?", &keyboards.StatsKeyboard),
+	)
 	return resp, nil
 }
 
@@ -48,7 +51,7 @@ func (p *StatsProcessor) Handle(ctx context.Context, state entities.UserState, m
 	switch msg.Text {
 	case messages.Back:
 		state.State = entities.StateMainMenu
-		resp := chatutils.RemoveAndSendNew(msg, "До встречи", keyboards.MainMenuKeyboard)
+		resp := chatutils.DisableKeyboardAndSendNew(msg, "До встречи", keyboards.MainMenuKeyboard)
 		return state, resp, nil
 	case messages.LastVoidShard:
 		state.State = entities.StateStats

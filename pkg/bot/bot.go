@@ -221,10 +221,10 @@ func (b *Bot) processUpdate(update tgbotapi.Update) {
 			}
 		}
 		pm = processor.ProcessingMessage{
-			User:      user,
-			ChatID:    update.Message.Chat.ID,
-			Text:      update.Message.Text,
-			MessageID: update.Message.MessageID,
+			User:    user,
+			ChatID:  update.Message.Chat.ID,
+			Text:    update.Message.Text,
+			Message: update.Message,
 		}
 	} else if update.CallbackQuery != nil {
 		callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
@@ -236,10 +236,10 @@ func (b *Bot) processUpdate(update tgbotapi.Update) {
 			user = entities.User{UserID: update.CallbackQuery.Message.Chat.ID}
 		}
 		pm = processor.ProcessingMessage{
-			User:      user,
-			ChatID:    update.CallbackQuery.Message.Chat.ID,
-			Text:      callback.Text,
-			MessageID: update.CallbackQuery.Message.MessageID,
+			User:    user,
+			ChatID:  update.CallbackQuery.Message.Chat.ID,
+			Text:    callback.Text,
+			Message: update.CallbackQuery.Message,
 		}
 	}
 
