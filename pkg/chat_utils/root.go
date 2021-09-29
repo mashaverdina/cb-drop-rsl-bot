@@ -18,7 +18,7 @@ func EditTo(msg MessageFromChat, text string, markup *tgbotapi.InlineKeyboardMar
 	if markup != nil {
 		resp.ReplyMarkup = markup
 	}
-	resp.ParseMode = tgbotapi.ModeMarkdown
+	resp.ParseMode = "MarkdownV2"
 	return []tgbotapi.Chattable{resp}
 }
 
@@ -27,6 +27,7 @@ func TextTo(msg Message, text string, markup interface{}) []tgbotapi.Chattable {
 	if markup != nil {
 		resp.ReplyMarkup = markup
 	}
+	resp.ParseMode = "MarkdownV2"
 	return []tgbotapi.Chattable{resp}
 }
 

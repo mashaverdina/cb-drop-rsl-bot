@@ -73,7 +73,7 @@ func (p *CbProcessor) Handle(ctx context.Context, state entities.UserState, msg 
 	case messages.EpicTome:
 		p.increment(&cbStat.EpicTome)
 	default:
-		resp := chatutils.TextTo(msg, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)", nil)
+		resp := chatutils.TextTo(msg, "АХАХАХХАА ТЫТ ТУТ ЗАВИС \\(Нажми закрыть\\)", nil)
 		return state, resp, nil
 	}
 
