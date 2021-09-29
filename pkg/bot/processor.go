@@ -50,7 +50,7 @@ func editTo(chatID int64, msgID int, text string, markup *tgbotapi.InlineKeyboar
 	if markup != nil {
 		resp.ReplyMarkup = markup
 	}
-	resp.ParseMode = "markdown"
+	resp.ParseMode = "Markdown"
 	return []tgbotapi.Chattable{resp}
 }
 
@@ -102,7 +102,10 @@ func (p *CbProcessor) Handle(ctx context.Context, state UserState, msg *Processi
 	case keyboards.Reject:
 		state.State = StateMainMenu
 		delete(p.stats, state.UserID)
-		resp := textTo(msg.ChatID, "До встречи", keyboards.MainMenuKeyboard)
+		resp := joinResp(
+			[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.ChatID, msg.MessageID)},
+			textTo(msg.ChatID, "До встречи", keyboards.MainMenuKeyboard),
+		)
 		return state, resp, nil
 	case keyboards.Approve:
 		state.State = StateMainMenu
@@ -114,8 +117,10 @@ func (p *CbProcessor) Handle(ctx context.Context, state UserState, msg *Processi
 		}
 
 		p.stats[state.UserID] = NewCbUserState(state.UserID, p.level)
-
-		resp := textTo(msg.ChatID, "Записано", keyboards.MainMenuKeyboard)
+		resp := joinResp(
+			editTo(msg.ChatID, msg.MessageID, msgFromStat(cbState, p.level), nil),
+			textTo(msg.ChatID, "Записано", keyboards.MainMenuKeyboard),
+		)
 		return state, resp, nil
 	case keyboards.Clear:
 		cbState = NewCbUserState(state.UserID, p.level)
@@ -139,6 +144,14 @@ func (p *CbProcessor) Handle(ctx context.Context, state UserState, msg *Processi
 	resp := editTo(msg.ChatID, msg.MessageID, msgFromStat(cbState, p.level), &keyboards.AddDropInlineKeyboard)
 	return state, resp, nil
 
+}
+
+func joinResp(resps ...[]tgbotapi.Chattable) []tgbotapi.Chattable {
+	result := make([]tgbotapi.Chattable, 0)
+	for _, arr := range resps {
+		result = append(result, arr...)
+	}
+	return result
 }
 
 func msgFromStat(state CbUserState, level int) string {
@@ -205,20 +218,40 @@ func (p *StatsProcessor) Handle(ctx context.Context, state UserState, msg *Proce
 		return state, resp, nil
 	case keyboards.LastVoidShard:
 		state.State = StateMainMenu
-		resp, err := p.LastStat(ctx, msg, "void_shard", "Последний темный осколок")
-		return state, resp, err
+		resp, err := p.LastStat(ctx, msg, "void_shard", keyboards.LastVoidShard+" осколок")
+		if err != nil {
+			return UserState{}, nil, err
+		}
+		return state, joinResp(
+			[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.ChatID, msg.MessageID)},
+			resp,
+		), nil
 	case keyboards.LastSacredShard:
 		state.State = StateMainMenu
-		resp, err := p.LastStat(ctx, msg, "sacred_shard", "Последний сакральный осколок")
-		return state, resp, err
+		resp, err := p.LastStat(ctx, msg, "sacred_shard", keyboards.LastVoidShard+" осколок")
+		if err != nil {
+			return UserState{}, nil, err
+		}
+		return state, joinResp(
+			[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.ChatID, msg.MessageID)},
+			resp,
+		), nil
 	case keyboards.LastLegTome:
 		state.State = StateMainMenu
-		resp, err := p.LastStat(ctx, msg, "leg_tome", "Последний лег том")
-		return state, resp, err
+		resp, err := p.LastStat(ctx, msg, "leg_tome", keyboards.LastLegTome)
+		if err != nil {
+			return UserState{}, nil, err
+		}
+		return state, joinResp(
+			[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.ChatID, msg.MessageID)},
+			resp,
+		), nil
 	case keyboards.MonthStats:
 		state.State = StateMonth
-		resp := textTo(msg.ChatID, "Выбери месяц", keyboards.ChooseMonthKeyboard)
-		return state, resp, nil
+		return state, joinResp(
+			[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.ChatID, msg.MessageID)},
+			textTo(msg.ChatID, "📅 Выбери месяц", keyboards.ChooseMonthKeyboard),
+		), nil
 	default:
 		resp := textTo(msg.ChatID, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)", nil)
 		return state, resp, nil
