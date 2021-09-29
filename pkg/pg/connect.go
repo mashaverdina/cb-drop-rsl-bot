@@ -64,19 +64,19 @@ func NewPGClient(hosts []string, port int, user string, password string, db stri
 func newHASQLTracer() hasql.Tracer {
 	return hasql.Tracer{
 		UpdateNodes: func() {
-			log.Println("update nodes")
+			// log.Println("update nodes")
 		},
 		UpdatedNodes: func(nodes hasql.AliveNodes) {
-			log.Printf("nodes were updates: %+v\n", nodes)
+			// log.Printf("nodes were updates: %+v\n", nodes)
 		},
 		NodeDead: func(node hasql.Node, err error) {
 			log.Printf("node %q is dead: %v\n", node, err)
 		},
 		NodeAlive: func(node hasql.Node) {
-			log.Printf("node %q is alive\n", node)
+			// log.Printf("node %q is alive\n", node)
 		},
 		NotifiedWaiters: func() {
-			log.Println("notified all waiters")
+			// log.Println("notified all waiters")
 		},
 	}
 }

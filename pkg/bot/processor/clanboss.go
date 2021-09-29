@@ -3,6 +3,7 @@ package processor
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -18,6 +19,7 @@ type CbProcessor struct {
 	level   int
 	stats   map[int64]entities.UserCbStat
 	storage *storage.CbStatStorage
+	m       sync.Mutex
 }
 
 func NewCbProcessor(level int, storage *storage.CbStatStorage) *CbProcessor {
@@ -25,6 +27,7 @@ func NewCbProcessor(level int, storage *storage.CbStatStorage) *CbProcessor {
 		level:   level,
 		stats:   make(map[int64]entities.UserCbStat),
 		storage: storage,
+		m:       sync.Mutex{},
 	}
 }
 
@@ -37,13 +40,14 @@ func (p *CbProcessor) Handle(ctx context.Context, state entities.UserState, msg 
 	switch msg.Text {
 	case messages.Reject:
 		state.State = entities.StateMainMenu
-		delete(p.stats, state.UserID)
+		p.deleteUserStat(state.UserID)
+
 		resp := chatutils.RemoveAndSendNew(msg, "До встречи", keyboards.MainMenuKeyboard)
 		return state, resp, nil
 	case messages.Approve:
 		state.State = entities.StateMainMenu
 
-		cbStat := p.stats[state.UserID]
+		cbStat := p.getOrCreateStats(state.UserID)
 		err := p.storage.Save(ctx, &cbStat)
 		if err != nil {
 			return entities.UserState{}, nil, fmt.Errorf("cb state db update failed: %v", err)
@@ -80,7 +84,20 @@ func (p *CbProcessor) Handle(ctx context.Context, state entities.UserState, msg 
 
 }
 
+func (p *CbProcessor) deleteUserStat(userID int64) {
+	p.m.Lock()
+	defer p.m.Unlock()
+	delete(p.stats, userID)
+}
+
+func (p *CbProcessor) updateStats(stat entities.UserCbStat) {
+	p.m.Lock()
+	defer p.m.Unlock()
+	p.stats[stat.UserID] = stat
+}
 func (p *CbProcessor) getOrCreateStats(userID int64) entities.UserCbStat {
+	p.m.Lock()
+	defer p.m.Unlock()
 	if s, ok := p.stats[userID]; ok && !s.Expired() {
 		return s
 	}

@@ -68,7 +68,7 @@ func main() {
 		panic(err)
 	}
 
-	bot := rslbot.NewBot(tgbot, pg)
+	bot := rslbot.NewBot(tgbot, pg, 5)
 	if err := bot.Start(context.Background()); err != nil {
 		panic(err)
 	}

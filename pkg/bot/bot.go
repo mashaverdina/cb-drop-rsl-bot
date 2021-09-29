@@ -25,13 +25,15 @@ type Bot struct {
 	cancel      context.CancelFunc
 	updates     tgbotapi.UpdatesChannel
 	userStorage *storage.UserStorage
+	msgQueue    chan []tgbotapi.Chattable
 	done        chan interface{}
 	m           sync.Mutex
 	started     bool
 	stopped     bool
+	numWorkers  uint64
 }
 
-func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient) *Bot {
+func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
 	bot := &Bot{
 		ctx:        nil,
 		botAPI:     botAPI,
@@ -39,10 +41,12 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient) *Bot {
 		processors: make(map[entities.State]processor.Processor),
 		cancel:     nil,
 		updates:    nil,
+		msgQueue:   make(chan []tgbotapi.Chattable),
 		done:       make(chan interface{}),
 		m:          sync.Mutex{},
 		started:    false,
 		stopped:    false,
+		numWorkers: numWorkers,
 	}
 
 	cbStatStorage := storage.NewCbStatStorage(pg)
@@ -70,6 +74,10 @@ func (b *Bot) Start(ctx context.Context) error {
 	b.ctx, b.cancel = context.WithCancel(ctx)
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
+
+	for i := uint64(0); i < b.numWorkers; i++ {
+		go b.worker(ctx)
+	}
 
 	updates := b.botAPI.GetUpdatesChan(u)
 	go b.loop(updates)
@@ -104,65 +112,14 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 			b.done <- true
 			return
 		case update := <-updates:
-			pm := processor.ProcessingMessage{}
-			if update.Message != nil {
-				user, err := b.userStorage.Load(b.ctx, update.Message.Chat.ID)
-				if err != nil {
-					user, err = b.userStorage.Create(b.ctx, &entities.User{
-						UserID:       update.Message.Chat.ID,
-						FirstName:    update.Message.From.FirstName,
-						LastName:     update.Message.From.LastName,
-						UserName:     update.Message.From.UserName,
-						LanguageCode: update.Message.From.LanguageCode,
-						Clan:         "",
-						Nickname:     "",
-					})
-					if err != nil {
-						user = entities.User{UserID: update.Message.Chat.ID}
-					}
-				}
-				pm = processor.ProcessingMessage{
-					User:      user,
-					ChatID:    update.Message.Chat.ID,
-					Text:      update.Message.Text,
-					MessageID: update.Message.MessageID,
-				}
-			} else if update.CallbackQuery != nil {
-				callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-				if _, err := b.botAPI.Request(callback); err != nil {
-					panic(err)
-				}
-				user, err := b.userStorage.Load(b.ctx, update.CallbackQuery.Message.Chat.ID)
-				if err != nil {
-					user = entities.User{UserID: update.CallbackQuery.Message.Chat.ID}
-				}
-				pm = processor.ProcessingMessage{
-					User:      user,
-					ChatID:    update.CallbackQuery.Message.Chat.ID,
-					Text:      callback.Text,
-					MessageID: update.CallbackQuery.Message.MessageID,
-				}
-			}
-
-			if update.Message != nil && update.Message.Command() != "" {
-				b.processCommand(pm.User, update.Message.Command(), update.Message.CommandArguments())
-			} else {
-				msgs, err := b.processUserMessage(&pm)
-				if err != nil {
-					log.Fatalf("got error, while processing message: %v", err)
-				}
-				for _, msg := range msgs {
-					if _, err := b.botAPI.Send(msg); err != nil {
-						log.Printf("error while sending message: %v\n", err)
-					}
-				}
-			}
+			go b.processUpdate(update)
 		}
 	}
-	log.Println("exiting loop")
 }
 
 func (b *Bot) getOrCreateState(userID int64) entities.UserState {
+	b.m.Lock()
+	defer b.m.Unlock()
 	if s, ok := b.states[userID]; ok {
 		return s
 	}
@@ -171,19 +128,25 @@ func (b *Bot) getOrCreateState(userID int64) entities.UserState {
 	return s
 }
 
+func (b *Bot) updateState(userID int64, newState entities.UserState) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	b.states[userID] = newState
+}
+
 func (b *Bot) processUserMessage(msg *processor.ProcessingMessage) ([]tgbotapi.Chattable, error) {
 	userID := msg.User.UserID
 	state := b.getOrCreateState(userID)
 
-	processor, err := b.findProcessor(state.State)
+	proc, err := b.findProcessor(state.State)
 	if err != nil {
 		return nil, err
 	}
-	newState, response, err := processor.Handle(b.ctx, state, msg)
+	newState, response, err := proc.Handle(b.ctx, state, msg)
 	if err != nil {
 		return nil, err
 	}
-	b.states[userID] = newState
+	b.updateState(userID, newState)
 	return response, nil
 }
 
@@ -225,34 +188,88 @@ func (b *Bot) NotifyNotFound(user entities.User) {
 }
 
 func (b *Bot) NotifyAll(ctx context.Context, arguments string) error {
-	workerCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	users := make(chan entities.User)
-
-	for i := 0; i < 10; i++ {
-		go func() {
-			for {
-				select {
-				case u := <-users:
-					_, _ = b.botAPI.Send(tgbotapi.NewMessage(u.UserID, arguments))
-				case <-workerCtx.Done():
-					return
-				}
-			}
-		}()
-	}
-
 	allUsers, err := b.userStorage.All(b.ctx)
 	if err != nil {
 		return err
 	}
 	for _, user := range allUsers {
 		select {
-		case users <- user:
+		case b.msgQueue <- []tgbotapi.Chattable{tgbotapi.NewMessage(user.UserID, arguments)}:
 		case <-ctx.Done():
 			return nil
 		}
 	}
 	return nil
+}
+
+func (b *Bot) processUpdate(update tgbotapi.Update) {
+	pm := processor.ProcessingMessage{}
+	if update.Message != nil {
+		user, err := b.userStorage.Load(b.ctx, update.Message.Chat.ID)
+		if err != nil {
+			user, err = b.userStorage.Create(b.ctx, &entities.User{
+				UserID:       update.Message.Chat.ID,
+				FirstName:    update.Message.From.FirstName,
+				LastName:     update.Message.From.LastName,
+				UserName:     update.Message.From.UserName,
+				LanguageCode: update.Message.From.LanguageCode,
+				Clan:         "",
+				Nickname:     "",
+			})
+			if err != nil {
+				user = entities.User{UserID: update.Message.Chat.ID}
+			}
+		}
+		pm = processor.ProcessingMessage{
+			User:      user,
+			ChatID:    update.Message.Chat.ID,
+			Text:      update.Message.Text,
+			MessageID: update.Message.MessageID,
+		}
+	} else if update.CallbackQuery != nil {
+		callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
+		if _, err := b.botAPI.Request(callback); err != nil {
+			panic(err)
+		}
+		user, err := b.userStorage.Load(b.ctx, update.CallbackQuery.Message.Chat.ID)
+		if err != nil {
+			user = entities.User{UserID: update.CallbackQuery.Message.Chat.ID}
+		}
+		pm = processor.ProcessingMessage{
+			User:      user,
+			ChatID:    update.CallbackQuery.Message.Chat.ID,
+			Text:      callback.Text,
+			MessageID: update.CallbackQuery.Message.MessageID,
+		}
+	}
+
+	if update.Message != nil && update.Message.Command() != "" {
+		b.processCommand(pm.User, update.Message.Command(), update.Message.CommandArguments())
+	} else {
+		msgs, err := b.processUserMessage(&pm)
+		if err != nil {
+			log.Fatalf("got error, while processing message: %v", err)
+		}
+		for _, msg := range msgs {
+			if _, err := b.botAPI.Send(msg); err != nil {
+				log.Printf("error while sending message: %v\n", err)
+			}
+		}
+	}
+}
+
+func (b *Bot) worker(ctx context.Context) {
+	for {
+		select {
+		case msgs := <-b.msgQueue:
+			for _, msg := range msgs {
+				_, err := b.botAPI.Send(msg)
+				if err != nil {
+					log.Println(fmt.Errorf("error while sending msg", err).Error())
+				}
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
