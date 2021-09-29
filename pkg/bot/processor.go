@@ -50,7 +50,7 @@ func editTo(chatID int64, msgID int, text string, markup *tgbotapi.InlineKeyboar
 	if markup != nil {
 		resp.ReplyMarkup = markup
 	}
-	resp.ParseMode = "Markdown"
+	resp.ParseMode = tgbotapi.ModeMarkdown
 	return []tgbotapi.Chattable{resp}
 }
 
@@ -202,11 +202,11 @@ func (p *StatsProcessor) LastStat(ctx context.Context, msg *ProcessingMessage, r
 		return nil, err
 	}
 
-	resp := textTo(msg.ChatID, strings.Join([]string{
+	resp := editTo(msg.ChatID, msg.MessageID, strings.Join([]string{
 		header,
 		fmt.Sprintf("С 5го -- %s", timePast(lastFrom5)),
 		fmt.Sprintf("С 6го -- %s", timePast(lastFrom6)),
-	}, "\n"), keyboards.MainMenuKeyboard)
+	}, "\n"), &keyboards.StatsKeyboard)
 	return resp, nil
 }
 
@@ -214,44 +214,26 @@ func (p *StatsProcessor) Handle(ctx context.Context, state UserState, msg *Proce
 	switch msg.Text {
 	case keyboards.Back:
 		state.State = StateMainMenu
-		resp := textTo(msg.ChatID, "До встречи", keyboards.MainMenuKeyboard)
+		resp := joinResp(
+			[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.ChatID, msg.MessageID)},
+			textTo(msg.ChatID, "До встречи", keyboards.MainMenuKeyboard),
+		)
 		return state, resp, nil
 	case keyboards.LastVoidShard:
-		state.State = StateMainMenu
+		state.State = StateStats
 		resp, err := p.LastStat(ctx, msg, "void_shard", keyboards.LastVoidShard+" осколок")
-		if err != nil {
-			return UserState{}, nil, err
-		}
-		return state, joinResp(
-			[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.ChatID, msg.MessageID)},
-			resp,
-		), nil
+		return state, resp, err
 	case keyboards.LastSacredShard:
-		state.State = StateMainMenu
-		resp, err := p.LastStat(ctx, msg, "sacred_shard", keyboards.LastVoidShard+" осколок")
-		if err != nil {
-			return UserState{}, nil, err
-		}
-		return state, joinResp(
-			[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.ChatID, msg.MessageID)},
-			resp,
-		), nil
+		state.State = StateStats
+		resp, err := p.LastStat(ctx, msg, "sacred_shard", keyboards.LastSacredShard+" осколок")
+		return state, resp, err
 	case keyboards.LastLegTome:
-		state.State = StateMainMenu
+		state.State = StateStats
 		resp, err := p.LastStat(ctx, msg, "leg_tome", keyboards.LastLegTome)
-		if err != nil {
-			return UserState{}, nil, err
-		}
-		return state, joinResp(
-			[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.ChatID, msg.MessageID)},
-			resp,
-		), nil
+		return state, resp, err
 	case keyboards.MonthStats:
 		state.State = StateMonth
-		return state, joinResp(
-			[]tgbotapi.Chattable{tgbotapi.NewDeleteMessage(msg.ChatID, msg.MessageID)},
-			textTo(msg.ChatID, "📅 Выбери месяц", keyboards.ChooseMonthKeyboard),
-		), nil
+		return state, editTo(msg.ChatID, msg.MessageID, "📅 Выбери месяц", &keyboards.ChooseMonthKeyboard), nil
 	default:
 		resp := textTo(msg.ChatID, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)", nil)
 		return state, resp, nil
@@ -272,10 +254,10 @@ func (p *MonthProcessor) Handle(ctx context.Context, state UserState, msg *Proce
 	switch msg.Text {
 	case keyboards.Back:
 		state.State = StateStats
-		resp := textTo(msg.ChatID, "Что тебе показать?", keyboards.StatsKeyboard)
+		resp := editTo(msg.ChatID, msg.MessageID, "Что тебе показать?", &keyboards.StatsKeyboard)
 		return state, resp, nil
 	case keyboards.Jan, keyboards.Feb, keyboards.Mar, keyboards.Apr, keyboards.May, keyboards.Jun, keyboards.Jul, keyboards.Aug, keyboards.Sep, keyboards.Oct, keyboards.Nov, keyboards.Dec:
-		state.State = StateMainMenu
+		state.State = StateStats
 		// TODO: get stats for month from DB
 		from, to := mothInterval(msg.Text)
 		monthStat, err := p.cbStatStorage.UserStatCombined(ctx, msg.User.UserID, []int{5, 6}, from, to)
@@ -287,7 +269,7 @@ func (p *MonthProcessor) Handle(ctx context.Context, state UserState, msg *Proce
 			replyMsg = fmt.Sprintf("Вот твоя статистика за %s:\n%s", msg.Text, statText)
 		}
 
-		resp := textTo(msg.ChatID, replyMsg, keyboards.MainMenuKeyboard)
+		resp := editTo(msg.ChatID, msg.MessageID, replyMsg, &keyboards.StatsKeyboard)
 		return state, resp, nil
 	default:
 		resp := textTo(msg.ChatID, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)", nil)

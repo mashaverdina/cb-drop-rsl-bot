@@ -10,6 +10,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+	"vkokarev.com/rslbot/pkg/keyboards"
 	"vkokarev.com/rslbot/pkg/pg"
 )
 
@@ -192,6 +193,10 @@ func (b *Bot) findProcessor(state State) (Processor, error) {
 
 func (b *Bot) processCommand(user User, command string, arguments string) {
 	switch command {
+	case "start":
+		msg := tgbotapi.NewMessage(user.UserID, "Добро пожаловать в RSL.CB бот. Используй клавиатуру внизу")
+		msg.ReplyMarkup = keyboards.MainMenuKeyboard
+		_, _ = b.botAPI.Send(msg)
 	case "notifyall":
 		if !user.HasSudo {
 			b.NotifySudo(user)

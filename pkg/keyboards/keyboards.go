@@ -77,37 +77,44 @@ var AddDropInlineKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	),
 )
 
-var StatsKeyboard = tgbotapi.NewReplyKeyboard(
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton(Back),
-		tgbotapi.NewKeyboardButton(MonthStats),
+var StatsKeyboard = tgbotapi.NewInlineKeyboardMarkup(
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(MonthStats, MonthStats),
 	),
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton(LastVoidShard),
-		tgbotapi.NewKeyboardButton(LastSacredShard),
-		tgbotapi.NewKeyboardButton(LastLegTome),
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(LastVoidShard, LastVoidShard),
+	),
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(LastSacredShard, LastSacredShard),
+	),
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(LastLegTome, LastLegTome),
+	),
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(Back, Back),
 	),
 )
-var ChooseMonthKeyboard = tgbotapi.NewReplyKeyboard(
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton(Jan),
-		tgbotapi.NewKeyboardButton(Feb),
-		tgbotapi.NewKeyboardButton(Mar),
-		tgbotapi.NewKeyboardButton(Apr),
+
+var ChooseMonthKeyboard = tgbotapi.NewInlineKeyboardMarkup(
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(Jan, Jan),
+		tgbotapi.NewInlineKeyboardButtonData(Feb, Feb),
+		tgbotapi.NewInlineKeyboardButtonData(Mar, Mar),
+		tgbotapi.NewInlineKeyboardButtonData(Apr, Apr),
 	),
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton(May),
-		tgbotapi.NewKeyboardButton(Jun),
-		tgbotapi.NewKeyboardButton(Jul),
-		tgbotapi.NewKeyboardButton(Aug),
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(May, May),
+		tgbotapi.NewInlineKeyboardButtonData(Jun, Jun),
+		tgbotapi.NewInlineKeyboardButtonData(Jul, Jul),
+		tgbotapi.NewInlineKeyboardButtonData(Aug, Aug),
 	),
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton(Sep),
-		tgbotapi.NewKeyboardButton(Oct),
-		tgbotapi.NewKeyboardButton(Nov),
-		tgbotapi.NewKeyboardButton(Dec),
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(Sep, Sep),
+		tgbotapi.NewInlineKeyboardButtonData(Oct, Oct),
+		tgbotapi.NewInlineKeyboardButtonData(Nov, Nov),
+		tgbotapi.NewInlineKeyboardButtonData(Dec, Dec),
 	),
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton(Back),
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(Back, Back),
 	),
 )
