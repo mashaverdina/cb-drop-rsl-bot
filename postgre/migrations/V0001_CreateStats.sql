@@ -1,4 +1,4 @@
-CREATE TABLE cb_user_states (
+CREATE TABLE user_cb_stats (
 	user_id INT NOT NULL,
 	related_to TIMESTAMP NOT NULL,
 	level INT NOT NULL,
@@ -12,6 +12,6 @@ CREATE TABLE cb_user_states (
 	PRIMARY KEY(user_id, related_to, level)
 );
 
-CREATE INDEX cb_user_states_lu_idx ON cb_user_states(last_update);
-CREATE INDEX cb_user_states_rel_idx ON cb_user_states(related_to);
-CREATE INDEX cb_user_user_id_idx ON cb_user_states(user_id);
+CREATE INDEX user_cb_stat_lu_idx ON user_cb_stats(last_update);
+CREATE INDEX user_cb_stat_rel_idx ON user_cb_stats(related_to);
+CREATE INDEX user_cb_stat_id_idx ON user_cb_stats(user_id);

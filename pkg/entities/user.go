@@ -1,4 +1,4 @@
-package rslbot
+package entities
 
 type User struct {
 	UserID       int64 `gorm:"primaryKey;index:planned_index"`

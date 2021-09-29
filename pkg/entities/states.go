@@ -1,34 +1,10 @@
-package rslbot
+package entities
 
 import (
 	"time"
 )
 
-type State string
-
-const (
-	StateMainMenu = "main-menu"
-	StateCb6      = "cb-6"
-	StateCb5      = "cb-5"
-	StateStats    = "stats"
-	StateMonth    = "month"
-)
-
-type UserState struct {
-	UserID     int64
-	LastUpdate time.Time
-	State      State
-}
-
-func NewUserState(userID int64) UserState {
-	return UserState{
-		UserID:     userID,
-		LastUpdate: time.Now(),
-		State:      StateMainMenu,
-	}
-}
-
-type CbUserState struct {
+type UserCbStat struct {
 	UserID     int64     `gorm:"primaryKey;index:planned_index"`
 	RelatedTo  time.Time `gorm:"primaryKey;index:planned_index"`
 	Level      int       `gorm:"primaryKey;index:planned_index"`
@@ -41,12 +17,12 @@ type CbUserState struct {
 	LegTome      int `json:"LegTome"`
 }
 
-func (s CbUserState) Expired() bool {
+func (s UserCbStat) Expired() bool {
 	return Related(s.RelatedTo) != Related(time.Now())
 }
 
-func NewCbUserState(userID int64, level int) CbUserState {
-	return CbUserState{
+func NewCbUserState(userID int64, level int) UserCbStat {
+	return UserCbStat{
 		UserID:     userID,
 		Level:      level,
 		LastUpdate: time.Now(),

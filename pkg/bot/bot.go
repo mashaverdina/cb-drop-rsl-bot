@@ -10,18 +10,21 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+	"vkokarev.com/rslbot/pkg/bot/processor"
+	"vkokarev.com/rslbot/pkg/entities"
 	"vkokarev.com/rslbot/pkg/keyboards"
 	"vkokarev.com/rslbot/pkg/pg"
+	"vkokarev.com/rslbot/pkg/storage"
 )
 
 type Bot struct {
 	ctx         context.Context
 	botAPI      *tgbotapi.BotAPI
-	states      map[int64]UserState
-	processors  map[State]Processor
+	states      map[int64]entities.UserState
+	processors  map[entities.State]processor.Processor
 	cancel      context.CancelFunc
 	updates     tgbotapi.UpdatesChannel
-	userStorage *UserStorage
+	userStorage *storage.UserStorage
 	done        chan interface{}
 	m           sync.Mutex
 	started     bool
@@ -32,8 +35,8 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient) *Bot {
 	bot := &Bot{
 		ctx:        nil,
 		botAPI:     botAPI,
-		states:     make(map[int64]UserState),
-		processors: make(map[State]Processor),
+		states:     make(map[int64]entities.UserState),
+		processors: make(map[entities.State]processor.Processor),
 		cancel:     nil,
 		updates:    nil,
 		done:       make(chan interface{}),
@@ -42,15 +45,15 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient) *Bot {
 		stopped:    false,
 	}
 
-	cbStatStorage := NewCbStatStorage(pg)
-	bot.processors = map[State]Processor{
-		StateMainMenu: &MainProcessor{},
-		StateCb5:      NewCbProcessor(5, cbStatStorage),
-		StateCb6:      NewCbProcessor(6, cbStatStorage),
-		StateStats:    NewStatsProcessor(cbStatStorage),
-		StateMonth:    NewMonthProcessor(cbStatStorage),
+	cbStatStorage := storage.NewCbStatStorage(pg)
+	bot.processors = map[entities.State]processor.Processor{
+		entities.StateMainMenu: &processor.MainProcessor{},
+		entities.StateCb5:      processor.NewCbProcessor(5, cbStatStorage),
+		entities.StateCb6:      processor.NewCbProcessor(6, cbStatStorage),
+		entities.StateStats:    processor.NewStatsProcessor(cbStatStorage),
+		entities.StateMonth:    processor.NewMonthProcessor(cbStatStorage),
 	}
-	bot.userStorage = NewUserStorage(pg)
+	bot.userStorage = storage.NewUserStorage(pg)
 
 	return bot
 
@@ -101,11 +104,11 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 			b.done <- true
 			return
 		case update := <-updates:
-			pm := ProcessingMessage{}
+			pm := processor.ProcessingMessage{}
 			if update.Message != nil {
 				user, err := b.userStorage.Load(b.ctx, update.Message.Chat.ID)
 				if err != nil {
-					user, err = b.userStorage.Create(b.ctx, &User{
+					user, err = b.userStorage.Create(b.ctx, &entities.User{
 						UserID:       update.Message.Chat.ID,
 						FirstName:    update.Message.From.FirstName,
 						LastName:     update.Message.From.LastName,
@@ -115,10 +118,10 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 						Nickname:     "",
 					})
 					if err != nil {
-						user = User{UserID: update.Message.Chat.ID}
+						user = entities.User{UserID: update.Message.Chat.ID}
 					}
 				}
-				pm = ProcessingMessage{
+				pm = processor.ProcessingMessage{
 					User:      user,
 					ChatID:    update.Message.Chat.ID,
 					Text:      update.Message.Text,
@@ -131,9 +134,9 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 				}
 				user, err := b.userStorage.Load(b.ctx, update.CallbackQuery.Message.Chat.ID)
 				if err != nil {
-					user = User{UserID: update.CallbackQuery.Message.Chat.ID}
+					user = entities.User{UserID: update.CallbackQuery.Message.Chat.ID}
 				}
-				pm = ProcessingMessage{
+				pm = processor.ProcessingMessage{
 					User:      user,
 					ChatID:    update.CallbackQuery.Message.Chat.ID,
 					Text:      callback.Text,
@@ -159,16 +162,16 @@ func (b *Bot) loop(updates tgbotapi.UpdatesChannel) {
 	log.Println("exiting loop")
 }
 
-func (b *Bot) getOrCreateState(userID int64) UserState {
+func (b *Bot) getOrCreateState(userID int64) entities.UserState {
 	if s, ok := b.states[userID]; ok {
 		return s
 	}
-	s := NewUserState(userID)
+	s := entities.NewUserState(userID)
 	b.states[userID] = s
 	return s
 }
 
-func (b *Bot) processUserMessage(msg *ProcessingMessage) ([]tgbotapi.Chattable, error) {
+func (b *Bot) processUserMessage(msg *processor.ProcessingMessage) ([]tgbotapi.Chattable, error) {
 	userID := msg.User.UserID
 	state := b.getOrCreateState(userID)
 
@@ -184,14 +187,14 @@ func (b *Bot) processUserMessage(msg *ProcessingMessage) ([]tgbotapi.Chattable, 
 	return response, nil
 }
 
-func (b *Bot) findProcessor(state State) (Processor, error) {
+func (b *Bot) findProcessor(state entities.State) (processor.Processor, error) {
 	if p, ok := b.processors[state]; ok {
 		return p, nil
 	}
 	return nil, errors.New("not found")
 }
 
-func (b *Bot) processCommand(user User, command string, arguments string) {
+func (b *Bot) processCommand(user entities.User, command string, arguments string) {
 	switch command {
 	case "start":
 		msg := tgbotapi.NewMessage(user.UserID, "Добро пожаловать в RSL.CB бот. Используй клавиатуру внизу")
@@ -211,12 +214,12 @@ func (b *Bot) processCommand(user User, command string, arguments string) {
 	}
 }
 
-func (b *Bot) NotifySudo(user User) {
+func (b *Bot) NotifySudo(user entities.User) {
 	msg := tgbotapi.NewMessage(user.UserID, "Для данной команды требуются супер права")
 	_, _ = b.botAPI.Send(msg)
 }
 
-func (b *Bot) NotifyNotFound(user User) {
+func (b *Bot) NotifyNotFound(user entities.User) {
 	msg := tgbotapi.NewMessage(user.UserID, "Команда не найдена")
 	_, _ = b.botAPI.Send(msg)
 }
@@ -225,7 +228,7 @@ func (b *Bot) NotifyAll(ctx context.Context, arguments string) error {
 	workerCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	users := make(chan User)
+	users := make(chan entities.User)
 
 	for i := 0; i < 10; i++ {
 		go func() {

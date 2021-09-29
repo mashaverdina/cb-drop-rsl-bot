@@ -2,119 +2,73 @@ package keyboards
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-)
 
-// generic controls
-const (
-	Approve = "✅ OK"
-	Reject  = "❌ Закрыть"
-	Back    = "🔙 Назад"
-)
-
-// main menu
-const (
-	Cb5   = "😈 Добавить дроп с 5 КБ"
-	Cb6   = "👹 Добавить дроп с 6 КБ"
-	Stats = "📈 Cтатистика"
-)
-
-// add drop inline menu
-const (
-	Clear        = "🔄 Заново"
-	AncientShard = "💙 Древний"
-	VoidShard    = "💜 Темный"
-	SacredShard  = "💛 Сакрал"
-	EpicTome     = "📘 Эпик том"
-	LegTome      = "📙 Лег том"
-)
-
-// stats menu
-const (
-	LastVoidShard   = "💜 Последний темный"
-	LastSacredShard = "💛 Последний сакрал"
-	LastLegTome     = "📙 Последний лег том"
-	MonthStats      = "📅 Дроп за месяц"
-)
-
-//month menu
-const (
-	Jan = "Январь"
-	Feb = "Февраль"
-	Mar = "Март"
-	Apr = "Апрель"
-	May = "Май"
-	Jun = "Июнь"
-	Jul = "Июль"
-	Aug = "Август"
-	Sep = "Сентябрь"
-	Oct = "Октябрь"
-	Nov = "Ноябрь"
-	Dec = "Декабрь"
+	"vkokarev.com/rslbot/pkg/messages"
 )
 
 var MainMenuKeyboard = tgbotapi.NewReplyKeyboard(
 	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton(Cb5),
-		tgbotapi.NewKeyboardButton(Cb6),
-		tgbotapi.NewKeyboardButton(Stats),
+		tgbotapi.NewKeyboardButton(messages.Cb5),
+		tgbotapi.NewKeyboardButton(messages.Cb6),
+		tgbotapi.NewKeyboardButton(messages.Stats),
 	),
 )
 
 var AddDropInlineKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(AncientShard, AncientShard),
-		tgbotapi.NewInlineKeyboardButtonData(VoidShard, VoidShard),
-		tgbotapi.NewInlineKeyboardButtonData(SacredShard, SacredShard),
+		tgbotapi.NewInlineKeyboardButtonData(messages.AncientShard, messages.AncientShard),
+		tgbotapi.NewInlineKeyboardButtonData(messages.VoidShard, messages.VoidShard),
+		tgbotapi.NewInlineKeyboardButtonData(messages.SacredShard, messages.SacredShard),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(EpicTome, EpicTome),
-		tgbotapi.NewInlineKeyboardButtonData(LegTome, LegTome),
-		tgbotapi.NewInlineKeyboardButtonData(Clear, Clear),
+		tgbotapi.NewInlineKeyboardButtonData(messages.EpicTome, messages.EpicTome),
+		tgbotapi.NewInlineKeyboardButtonData(messages.LegTome, messages.LegTome),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Clear, messages.Clear),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(Approve, Approve),
-		tgbotapi.NewInlineKeyboardButtonData(Reject, Reject),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Approve, messages.Approve),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Reject, messages.Reject),
 	),
 )
 
 var StatsKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(MonthStats, MonthStats),
+		tgbotapi.NewInlineKeyboardButtonData(messages.MonthStats, messages.MonthStats),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(LastVoidShard, LastVoidShard),
+		tgbotapi.NewInlineKeyboardButtonData(messages.LastVoidShard, messages.LastVoidShard),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(LastSacredShard, LastSacredShard),
+		tgbotapi.NewInlineKeyboardButtonData(messages.LastSacredShard, messages.LastSacredShard),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(LastLegTome, LastLegTome),
+		tgbotapi.NewInlineKeyboardButtonData(messages.LastLegTome, messages.LastLegTome),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(Back, Back),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Back, messages.Back),
 	),
 )
 
 var ChooseMonthKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(Jan, Jan),
-		tgbotapi.NewInlineKeyboardButtonData(Feb, Feb),
-		tgbotapi.NewInlineKeyboardButtonData(Mar, Mar),
-		tgbotapi.NewInlineKeyboardButtonData(Apr, Apr),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Jan, messages.Jan),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Feb, messages.Feb),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Mar, messages.Mar),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Apr, messages.Apr),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(May, May),
-		tgbotapi.NewInlineKeyboardButtonData(Jun, Jun),
-		tgbotapi.NewInlineKeyboardButtonData(Jul, Jul),
-		tgbotapi.NewInlineKeyboardButtonData(Aug, Aug),
+		tgbotapi.NewInlineKeyboardButtonData(messages.May, messages.May),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Jun, messages.Jun),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Jul, messages.Jul),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Aug, messages.Aug),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(Sep, Sep),
-		tgbotapi.NewInlineKeyboardButtonData(Oct, Oct),
-		tgbotapi.NewInlineKeyboardButtonData(Nov, Nov),
-		tgbotapi.NewInlineKeyboardButtonData(Dec, Dec),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Sep, messages.Sep),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Oct, messages.Oct),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Nov, messages.Nov),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Dec, messages.Dec),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(Back, Back),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Back, messages.Back),
 	),
 )
