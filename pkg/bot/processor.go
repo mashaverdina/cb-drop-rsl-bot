@@ -31,6 +31,14 @@ const (
 	dateFormat = "02.01.2006"
 )
 
+const (
+	ancientSymbol = "💙"
+	voidSymbol    = "💜"
+	sacredSymbol  = "💛"
+	epicSymbol    = "📘"
+	legSymbol     = "📙"
+)
+
 type ProcessingMessage struct {
 	User      User
 	ChatID    int64
@@ -118,7 +126,7 @@ func (p *CbProcessor) Handle(ctx context.Context, state UserState, msg *Processi
 
 		p.stats[state.UserID] = NewCbUserState(state.UserID, p.level)
 		resp := joinResp(
-			editTo(msg.ChatID, msg.MessageID, msgFromStat(cbState, p.level), nil),
+			editTo(msg.ChatID, msg.MessageID, msgFromCombinedStat(cbState, p.level), nil),
 			textTo(msg.ChatID, "Записано", keyboards.MainMenuKeyboard),
 		)
 		return state, resp, nil
@@ -141,7 +149,7 @@ func (p *CbProcessor) Handle(ctx context.Context, state UserState, msg *Processi
 
 	p.stats[state.UserID] = cbState
 
-	resp := editTo(msg.ChatID, msg.MessageID, msgFromStat(cbState, p.level), &keyboards.AddDropInlineKeyboard)
+	resp := editTo(msg.ChatID, msg.MessageID, msgFromCombinedStat(cbState, p.level), &keyboards.AddDropInlineKeyboard)
 	return state, resp, nil
 
 }
@@ -154,17 +162,50 @@ func joinResp(resps ...[]tgbotapi.Chattable) []tgbotapi.Chattable {
 	return result
 }
 
-func msgFromStat(state CbUserState, level int) string {
+func msgFromCombinedStat(state CbUserState, level int) string {
 	lines := []string{}
 	if level > 0 {
-		lines = append(lines, fmt.Sprintf("Стата по *%d КБ*", level))
+		lines = append(lines, fmt.Sprintf("Твой дроп с *%d КБ*", level))
 	}
 
-	lines = append(lines, fmt.Sprintf("%s -- %d", keyboards.AncientShard, state.AncientShard))
-	lines = append(lines, fmt.Sprintf("%s -- %d", keyboards.VoidShard, state.VoidShard))
-	lines = append(lines, fmt.Sprintf("%s -- %d", keyboards.SacredShard, state.SacredShard))
+	lines = append(lines, fmt.Sprintf("%s --- %d", keyboards.AncientShard, state.AncientShard))
+	lines = append(lines, fmt.Sprintf("%s ---- %d", keyboards.VoidShard, state.VoidShard))
+	lines = append(lines, fmt.Sprintf("%s ---- %d", keyboards.SacredShard, state.SacredShard))
 	lines = append(lines, fmt.Sprintf("%s -- %d", keyboards.EpicTome, state.EpicTome))
-	lines = append(lines, fmt.Sprintf("%s -- %d", keyboards.LegTome, state.LegTome))
+	lines = append(lines, fmt.Sprintf("%s ---- %d", keyboards.LegTome, state.LegTome))
+
+	return strings.Join(lines, "\n")
+}
+
+func msgFromStat(state []CbUserState, level int, month string) string {
+	lines := []string{}
+	if level > 0 {
+		lines = append(lines, fmt.Sprintf("Твой дроп с *%d КБ* за *%s*", level, month))
+	}
+	if len(state) == 0 {
+		lines = append(lines, "Нет данных")
+	}
+
+	for _, row := range state {
+		statsString := ""
+		for i := 0; i < row.AncientShard; i++ {
+			statsString = statsString + ancientSymbol
+		}
+		for i := 0; i < row.VoidShard; i++ {
+			statsString = statsString + voidSymbol
+		}
+		for i := 0; i < row.SacredShard; i++ {
+			statsString = statsString + sacredSymbol
+		}
+		for i := 0; i < row.EpicTome; i++ {
+			statsString = statsString + epicSymbol
+		}
+		for i := 0; i < row.LegTome; i++ {
+			statsString = statsString + legSymbol
+		}
+
+		lines = append(lines, fmt.Sprintf("%s %s", row.RelatedTo.Format(dateFormat), statsString))
+	}
 
 	return strings.Join(lines, "\n")
 }
@@ -258,16 +299,30 @@ func (p *MonthProcessor) Handle(ctx context.Context, state UserState, msg *Proce
 		return state, resp, nil
 	case keyboards.Jan, keyboards.Feb, keyboards.Mar, keyboards.Apr, keyboards.May, keyboards.Jun, keyboards.Jul, keyboards.Aug, keyboards.Sep, keyboards.Oct, keyboards.Nov, keyboards.Dec:
 		state.State = StateStats
-		// TODO: get stats for month from DB
+		replyMsgLines := []string{}
 		from, to := mothInterval(msg.Text)
-		monthStat, err := p.cbStatStorage.UserStatCombined(ctx, msg.User.UserID, []int{5, 6}, from, to)
-		var replyMsg = ""
+		monthStat5, err := p.cbStatStorage.UserStat(ctx, msg.User.UserID, []int{5}, from, to)
 		if err != nil {
-			replyMsg = "Статистики пока нет"
+			replyMsgLines = append(replyMsgLines, "Статистики по 5 кб пока нет")
 		} else {
-			statText := msgFromStat(monthStat, 0)
-			replyMsg = fmt.Sprintf("Вот твоя статистика за %s:\n%s", msg.Text, statText)
+			replyMsgLines = append(replyMsgLines, msgFromStat(monthStat5, 5, msg.Text))
 		}
+		monthStatCombined5, err := p.cbStatStorage.UserStatCombined(ctx, msg.User.UserID, []int{5}, from, to)
+		if err == nil {
+			replyMsgLines = append(replyMsgLines, msgFromCombinedStat(monthStatCombined5, 0))
+		}
+		replyMsgLines = append(replyMsgLines, "\n")
+		monthStat6, err := p.cbStatStorage.UserStat(ctx, msg.User.UserID, []int{6}, from, to)
+		if err != nil {
+			replyMsgLines = append(replyMsgLines, "Статистики по 6 кб пока нет")
+		} else {
+			replyMsgLines = append(replyMsgLines, msgFromStat(monthStat6, 6, msg.Text))
+		}
+		monthStatCombined6, err := p.cbStatStorage.UserStatCombined(ctx, msg.User.UserID, []int{6}, from, to)
+		if err == nil {
+			replyMsgLines = append(replyMsgLines, msgFromCombinedStat(monthStatCombined6, 0))
+		}
+		replyMsg := strings.Join(replyMsgLines, "\n")
 
 		resp := editTo(msg.ChatID, msg.MessageID, replyMsg, &keyboards.StatsKeyboard)
 		return state, resp, nil
