@@ -1,6 +1,8 @@
 package keyboards
 
 import (
+	"time"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"vkokarev.com/rslbot/pkg/messages"
@@ -49,26 +51,39 @@ var StatsKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	),
 )
 
-var ChooseMonthKeyboard = tgbotapi.NewInlineKeyboardMarkup(
-	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(messages.Jan, messages.Jan),
-		tgbotapi.NewInlineKeyboardButtonData(messages.Feb, messages.Feb),
-		tgbotapi.NewInlineKeyboardButtonData(messages.Mar, messages.Mar),
-		tgbotapi.NewInlineKeyboardButtonData(messages.Apr, messages.Apr),
-	),
-	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(messages.May, messages.May),
-		tgbotapi.NewInlineKeyboardButtonData(messages.Jun, messages.Jun),
-		tgbotapi.NewInlineKeyboardButtonData(messages.Jul, messages.Jul),
-		tgbotapi.NewInlineKeyboardButtonData(messages.Aug, messages.Aug),
-	),
-	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(messages.Sep, messages.Sep),
-		tgbotapi.NewInlineKeyboardButtonData(messages.Oct, messages.Oct),
-		tgbotapi.NewInlineKeyboardButtonData(messages.Nov, messages.Nov),
-		tgbotapi.NewInlineKeyboardButtonData(messages.Dec, messages.Dec),
-	),
-	tgbotapi.NewInlineKeyboardRow(
+var allMonth = []string{
+	messages.Jan,
+	messages.Feb,
+	messages.Mar,
+	messages.Apr,
+	messages.May,
+	messages.Jun,
+	messages.Jul,
+	messages.Aug,
+	messages.Sep,
+	messages.Oct,
+	messages.Nov,
+	messages.Dec,
+}
+
+func ChooseMonthKeyboard() *tgbotapi.InlineKeyboardMarkup {
+	markup := make([][]tgbotapi.InlineKeyboardButton, 0, 4)
+	currentButtons := make([]tgbotapi.InlineKeyboardButton, 0, 3)
+
+	_, realMonth, _ := time.Now().Date()
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 4; j++ {
+			curMonth := (int(realMonth) + i*4 + j) % 12
+			currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(allMonth[curMonth], allMonth[curMonth]))
+		}
+		markup = append(markup, currentButtons)
+		currentButtons = make([]tgbotapi.InlineKeyboardButton, 0, 3)
+	}
+
+	markup = append(markup, tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData(messages.Back, messages.Back),
-	),
-)
+	))
+
+	r := tgbotapi.NewInlineKeyboardMarkup(markup...)
+	return &r
+}

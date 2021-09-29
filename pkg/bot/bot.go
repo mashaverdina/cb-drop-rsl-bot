@@ -229,7 +229,7 @@ func (b *Bot) processUpdate(update tgbotapi.Update) {
 	} else if update.CallbackQuery != nil {
 		callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 		if _, err := b.botAPI.Request(callback); err != nil {
-			panic(err)
+			log.Print(fmt.Errorf("got error while processint callback request", err))
 		}
 		user, err := b.userStorage.Load(b.ctx, update.CallbackQuery.Message.Chat.ID)
 		if err != nil {

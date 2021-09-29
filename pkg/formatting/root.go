@@ -48,7 +48,7 @@ func CbStatFields(stat entities.UserCbStat) []cbStatPair {
 func VerticalCbStat(stat entities.UserCbStat) string {
 	lines := []string{}
 	for _, p := range CbStatFields(stat) {
-		line := fmt.Sprintf("%s \\-\\-\\- %d", p.Title, p.Value)
+		line := fmt.Sprintf("%s --- %d", p.Title, p.Value)
 		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")
@@ -76,7 +76,7 @@ func CbStatsFormat(stats []entities.UserCbStat, withTime bool, headerPattern str
 	for _, stat := range stats {
 		line := HorizontalCbStat(stat, ShortMapping)
 		if withTime {
-			prefix := strings.ReplaceAll(stat.RelatedTo.Format(dateFormat), ".", "\\.")
+			prefix := stat.RelatedTo.Format(dateFormat)
 			line = fmt.Sprintf("_%s_ %s", prefix, line)
 		}
 		lines = append(lines, line)
@@ -98,7 +98,7 @@ func TimePast(t *time.Time) string {
 	}
 	delta := time.Now().Sub(*t)
 	if delta.Hours() < 24 {
-		return t.Format(dateFormat) + " \\(сегодня\\)"
+		return t.Format(dateFormat) + " (сегодня)"
 	}
-	return t.Format(dateFormat) + " \\(\\" + strconv.FormatInt(int64(delta.Hours()/24), 10) + " д. назад\\)"
+	return t.Format(dateFormat) + " (" + strconv.FormatInt(int64(delta.Hours()/24), 10) + " д. назад)"
 }

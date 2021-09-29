@@ -3,3 +3,6 @@ start-db:
 
 stop-db:
 	docker-compose down
+
+build-linux:
+	exec ./build.sh

@@ -55,11 +55,11 @@ func (p *StatsProcessor) Handle(ctx context.Context, state entities.UserState, m
 		return state, resp, nil
 	case messages.LastVoidShard:
 		state.State = entities.StateStats
-		resp, err := p.LastStat(ctx, msg, "void_shard", messages.LastVoidShard+" осколок")
+		resp, err := p.LastStat(ctx, msg, "void_shard", messages.LastVoidShard)
 		return state, resp, err
 	case messages.LastSacredShard:
 		state.State = entities.StateStats
-		resp, err := p.LastStat(ctx, msg, "sacred_shard", messages.LastSacredShard+" осколок")
+		resp, err := p.LastStat(ctx, msg, "sacred_shard", messages.LastSacredShard)
 		return state, resp, err
 	case messages.LastLegTome:
 		state.State = entities.StateStats
@@ -67,9 +67,9 @@ func (p *StatsProcessor) Handle(ctx context.Context, state entities.UserState, m
 		return state, resp, err
 	case messages.MonthStats:
 		state.State = entities.StateMonth
-		return state, chatutils.EditTo(msg, "📅 Выбери месяц", &keyboards.ChooseMonthKeyboard), nil
+		return state, chatutils.EditTo(msg, "📅 Выбери месяц", keyboards.ChooseMonthKeyboard()), nil
 	default:
-		resp := chatutils.TextTo(msg, "АХАХАХХАА ТЫТ ТУТ ЗАВИС \\(Нажми закрыть\\)", nil)
+		resp := chatutils.TextTo(msg, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)", nil)
 		return state, resp, nil
 	}
 }

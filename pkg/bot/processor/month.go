@@ -38,7 +38,7 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 		for i := 5; i <= 6; i++ {
 			monthStat, err := p.cbStatStorage.UserStat(ctx, msg.User.UserID, []int{i}, from, to)
 			if err != nil || len(monthStat) == 0 {
-				replyMsgLines = append(replyMsgLines, fmt.Sprintf("Статистики по %d кб пока нет", i))
+				replyMsgLines = append(replyMsgLines, fmt.Sprintf("Статистики по *%d кб* за *%s* пока нет", i, msg.Text))
 				continue
 			} else {
 				replyMsgLines = append(
@@ -54,10 +54,13 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 		}
 		replyMsg := strings.Join(replyMsgLines, "\n")
 
-		resp := chatutils.EditTo(msg, replyMsg, &keyboards.StatsKeyboard)
+		resp := chatutils.JoinResp(
+			chatutils.RemoveAndSendNew(msg, replyMsg, nil),
+			chatutils.TextTo(msg, "Что тебе показать?", &keyboards.StatsKeyboard),
+		)
 		return state, resp, nil
 	default:
-		resp := chatutils.TextTo(msg, "АХАХАХХАА ТЫТ ТУТ ЗАВИС \\(Нажми закрыть\\)", nil)
+		resp := chatutils.TextTo(msg, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)", nil)
 		return state, resp, nil
 	}
 }
