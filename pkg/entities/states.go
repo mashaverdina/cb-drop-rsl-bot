@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+var MSK, _ = time.LoadLocation("Europe/Moscow")
+
 type UserCbStat struct {
 	UserID     int64     `gorm:"primaryKey;index:planned_index"`
 	RelatedTo  time.Time `gorm:"primaryKey;index:planned_index"`
@@ -31,6 +33,6 @@ func NewCbUserState(userID int64, level int) UserCbStat {
 }
 
 func Related(t time.Time) time.Time {
-	y, m, d := t.Date()
+	y, m, d := t.In(MSK).Date()
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
