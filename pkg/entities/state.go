@@ -2,6 +2,8 @@ package entities
 
 import (
 	"time"
+
+	"vkokarev.com/rslbot/pkg/utils"
 )
 
 type State string
@@ -23,7 +25,7 @@ type UserState struct {
 func NewUserState(userID int64) UserState {
 	return UserState{
 		UserID:     userID,
-		LastUpdate: time.Now(),
+		LastUpdate: utils.MskNow(),
 		State:      StateMainMenu,
 	}
 }

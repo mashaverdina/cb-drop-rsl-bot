@@ -2,9 +2,9 @@ package entities
 
 import (
 	"time"
-)
 
-var MSK, _ = time.LoadLocation("Europe/Moscow")
+	"vkokarev.com/rslbot/pkg/utils"
+)
 
 type UserCbStat struct {
 	UserID     int64     `gorm:"primaryKey;index:planned_index"`
@@ -20,19 +20,19 @@ type UserCbStat struct {
 }
 
 func (s UserCbStat) Expired() bool {
-	return Related(s.RelatedTo) != Related(time.Now())
+	return Related(s.RelatedTo) != Related(utils.MskNow())
 }
 
 func NewCbUserState(userID int64, level int) UserCbStat {
 	return UserCbStat{
 		UserID:     userID,
 		Level:      level,
-		LastUpdate: time.Now(),
-		RelatedTo:  Related(time.Now()),
+		LastUpdate: utils.MskNow(),
+		RelatedTo:  Related(utils.MskNow()),
 	}
 }
 
 func Related(t time.Time) time.Time {
-	y, m, d := t.In(MSK).Date()
+	y, m, d := t.Date()
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }

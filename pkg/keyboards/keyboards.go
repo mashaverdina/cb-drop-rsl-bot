@@ -6,6 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"vkokarev.com/rslbot/pkg/messages"
+	"vkokarev.com/rslbot/pkg/utils"
 )
 
 var MainMenuKeyboard = tgbotapi.NewReplyKeyboard(
@@ -71,7 +72,7 @@ func ChooseMonthKeyboard() *tgbotapi.InlineKeyboardMarkup {
 	markup := make([][]tgbotapi.InlineKeyboardButton, 0, 4)
 	currentButtons := make([]tgbotapi.InlineKeyboardButton, 0, 3)
 
-	_, realMonth, _ := time.Now().Date()
+	_, realMonth, _ := utils.MskNow().Date()
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 4; j++ {
 			currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(allMonth[realMonth], allMonth[realMonth]))

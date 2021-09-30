@@ -14,6 +14,7 @@ import (
 	"vkokarev.com/rslbot/pkg/keyboards"
 	"vkokarev.com/rslbot/pkg/messages"
 	"vkokarev.com/rslbot/pkg/storage"
+	"vkokarev.com/rslbot/pkg/utils"
 )
 
 type StatsProcessor struct {
@@ -76,7 +77,7 @@ func (p *StatsProcessor) Handle(ctx context.Context, state entities.UserState, m
 
 func mothInterval(month string) (time.Time, time.Time) {
 	mn := monthMap[month]
-	cy, cm, _ := time.Now().Date()
+	cy, cm, _ := utils.MskNow().Date()
 	if cm < mn {
 		cy = cy - 1
 	}

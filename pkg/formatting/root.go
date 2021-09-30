@@ -8,6 +8,7 @@ import (
 
 	"vkokarev.com/rslbot/pkg/entities"
 	"vkokarev.com/rslbot/pkg/messages"
+	"vkokarev.com/rslbot/pkg/utils"
 )
 
 const (
@@ -96,7 +97,7 @@ func TimePast(t *time.Time) string {
 	if t == nil {
 		return "никогда"
 	}
-	delta := time.Now().Sub(*t)
+	delta := utils.MskNow().Sub(*t)
 	if delta.Hours() < 24 {
 		return t.Format(dateFormat) + " (сегодня)"
 	}
