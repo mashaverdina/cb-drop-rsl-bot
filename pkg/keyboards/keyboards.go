@@ -52,6 +52,7 @@ var StatsKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 )
 
 var allMonth = []string{
+	"",
 	messages.Jan,
 	messages.Feb,
 	messages.Mar,
@@ -73,8 +74,8 @@ func ChooseMonthKeyboard() *tgbotapi.InlineKeyboardMarkup {
 	_, realMonth, _ := time.Now().Date()
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 4; j++ {
-			curMonth := (int(realMonth) + i*4 + j) % 12
-			currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(allMonth[curMonth], allMonth[curMonth]))
+			currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(allMonth[realMonth], allMonth[realMonth]))
+			nextMonth(&realMonth)
 		}
 		markup = append(markup, currentButtons)
 		currentButtons = make([]tgbotapi.InlineKeyboardButton, 0, 3)
@@ -86,4 +87,13 @@ func ChooseMonthKeyboard() *tgbotapi.InlineKeyboardMarkup {
 
 	r := tgbotapi.NewInlineKeyboardMarkup(markup...)
 	return &r
+}
+
+func nextMonth(m *time.Month) {
+	if *m == time.December {
+		*m = time.January
+	} else {
+		*m = *m + 1
+	}
+
 }
