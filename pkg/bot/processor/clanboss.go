@@ -53,7 +53,7 @@ func (p *CbProcessor) Handle(ctx context.Context, state entities.UserState, msg 
 			return entities.UserState{}, nil, fmt.Errorf("cb state db update failed: %v", err)
 		}
 
-		p.stats[state.UserID] = entities.NewCbUserState(state.UserID, p.level)
+		p.updateStats(entities.NewCbUserState(state.UserID, p.level))
 
 		resp := chatutils.JoinResp(
 			chatutils.EditTo(msg, format(cbStat), nil),
@@ -73,15 +73,18 @@ func (p *CbProcessor) Handle(ctx context.Context, state entities.UserState, msg 
 	case messages.EpicTome:
 		p.increment(&cbStat.EpicTome)
 	default:
-		resp := chatutils.TextTo(msg, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)", nil)
-		return state, resp, nil
+		return state, nil, UnknownResuest
 	}
 
-	p.stats[state.UserID] = cbStat
+	p.updateStats(cbStat)
 
 	resp := chatutils.EditTo(msg, format(cbStat), &keyboards.AddDropInlineKeyboard)
 	return state, resp, nil
 
+}
+
+func (p *CbProcessor) CancelFor(userID int64) {
+	p.deleteUserStat(userID)
 }
 
 func (p *CbProcessor) deleteUserStat(userID int64) {

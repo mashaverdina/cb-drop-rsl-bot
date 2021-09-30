@@ -1,10 +1,13 @@
 package processor
 
 import (
+	"errors"
 	"time"
 
 	"vkokarev.com/rslbot/pkg/messages"
 )
+
+var UnknownResuest = errors.New("unknown request")
 
 var monthMap = map[string]time.Month{
 	messages.Jan: time.January,

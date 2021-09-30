@@ -11,6 +11,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"vkokarev.com/rslbot/pkg/bot/processor"
+	chatutils "vkokarev.com/rslbot/pkg/chat_utils"
 	"vkokarev.com/rslbot/pkg/entities"
 	"vkokarev.com/rslbot/pkg/keyboards"
 	"vkokarev.com/rslbot/pkg/pg"
@@ -142,8 +143,23 @@ func (b *Bot) processUserMessage(msg *processor.ProcessingMessage) ([]tgbotapi.C
 	if err != nil {
 		return nil, err
 	}
+
 	newState, response, err := proc.Handle(b.ctx, state, msg)
-	if err != nil {
+	if err == processor.UnknownResuest {
+		mainProc := b.processors[entities.StateMainMenu].(*processor.MainProcessor)
+
+		if proc == mainProc {
+			return chatutils.TextTo(msg, "Не тыкай куда попало, используй кнопки!", keyboards.MainMenuKeyboard), nil
+		}
+
+		if mainProc.CanHandle(msg) {
+			proc.CancelFor(msg.User.UserID)
+			b.updateState(msg.User.UserID, entities.NewUserState(msg.User.UserID))
+			return b.processUserMessage(msg)
+		} else {
+			return chatutils.TextTo(msg, "Не тыкай куда попало, используй кнопки!", keyboards.MainMenuKeyboard), nil
+		}
+	} else if err != nil {
 		return nil, err
 	}
 	b.updateState(userID, newState)
@@ -248,7 +264,8 @@ func (b *Bot) processUpdate(update tgbotapi.Update) {
 	} else {
 		msgs, err := b.processUserMessage(&pm)
 		if err != nil {
-			log.Fatalf("got error, while processing message: %v", err)
+			log.Printf("got error, while processing message: %v", err)
+			msgs = chatutils.TextTo(&pm, "Прозошла отвратительная ошибка, попробуй еще раз", keyboards.MainMenuKeyboard)
 		}
 		for _, msg := range msgs {
 			if _, err := b.botAPI.Send(msg); err != nil {

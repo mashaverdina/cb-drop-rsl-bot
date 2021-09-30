@@ -60,7 +60,9 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 		)
 		return state, resp, nil
 	default:
-		resp := chatutils.TextTo(msg, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)", nil)
-		return state, resp, nil
+		return state, nil, UnknownResuest
 	}
+}
+
+func (p *MonthProcessor) CancelFor(userID int64) {
 }

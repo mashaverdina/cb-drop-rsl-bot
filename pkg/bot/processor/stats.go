@@ -70,9 +70,11 @@ func (p *StatsProcessor) Handle(ctx context.Context, state entities.UserState, m
 		state.State = entities.StateMonth
 		return state, chatutils.EditTo(msg, "📅 Выбери месяц", keyboards.ChooseMonthKeyboard()), nil
 	default:
-		resp := chatutils.TextTo(msg, "АХАХАХХАА ТЫТ ТУТ ЗАВИС (Нажми закрыть)", nil)
-		return state, resp, nil
+		return state, nil, UnknownResuest
 	}
+}
+
+func (p *StatsProcessor) CancelFor(userID int64) {
 }
 
 func mothInterval(month string) (time.Time, time.Time) {

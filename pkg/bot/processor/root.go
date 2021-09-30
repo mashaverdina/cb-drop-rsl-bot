@@ -10,6 +10,7 @@ import (
 
 type Processor interface {
 	Handle(ctx context.Context, state entities.UserState, msg *ProcessingMessage) (entities.UserState, []tgbotapi.Chattable, error)
+	CancelFor(userID int64)
 }
 
 type ProcessingMessage struct {
