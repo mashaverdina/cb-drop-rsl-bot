@@ -12,3 +12,7 @@ type User struct {
 
 	HasSudo bool
 }
+
+func (u *User) Chat() int64 {
+	return u.UserID
+}

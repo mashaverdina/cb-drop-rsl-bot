@@ -10,28 +10,32 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+	"vkokarev.com/rslbot/pkg/bot/command"
 	"vkokarev.com/rslbot/pkg/bot/processor"
 	chatutils "vkokarev.com/rslbot/pkg/chat_utils"
 	"vkokarev.com/rslbot/pkg/entities"
 	"vkokarev.com/rslbot/pkg/keyboards"
+	"vkokarev.com/rslbot/pkg/notification"
 	"vkokarev.com/rslbot/pkg/pg"
 	"vkokarev.com/rslbot/pkg/storage"
 )
 
 type Bot struct {
-	ctx         context.Context
-	botAPI      *tgbotapi.BotAPI
-	states      map[int64]entities.UserState
-	processors  map[entities.State]processor.Processor
-	cancel      context.CancelFunc
-	updates     tgbotapi.UpdatesChannel
-	userStorage *storage.UserStorage
-	msgQueue    chan []tgbotapi.Chattable
-	done        chan interface{}
-	m           sync.Mutex
-	started     bool
-	stopped     bool
-	numWorkers  uint64
+	ctx                 context.Context
+	botAPI              *tgbotapi.BotAPI
+	states              map[int64]entities.UserState
+	processors          map[entities.State]processor.Processor
+	commands            []command.BotCommand
+	cancel              context.CancelFunc
+	updates             tgbotapi.UpdatesChannel
+	userStorage         *storage.UserStorage
+	msgQueue            chan []tgbotapi.Chattable
+	done                chan interface{}
+	m                   sync.Mutex
+	started             bool
+	stopped             bool
+	numWorkers          uint64
+	notificationManager *notification.NotificationManager
 }
 
 func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
@@ -40,6 +44,7 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
 		botAPI:     botAPI,
 		states:     make(map[int64]entities.UserState),
 		processors: make(map[entities.State]processor.Processor),
+		commands:   make([]command.BotCommand, 0),
 		cancel:     nil,
 		updates:    nil,
 		msgQueue:   make(chan []tgbotapi.Chattable),
@@ -60,6 +65,18 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
 	}
 	bot.userStorage = storage.NewUserStorage(pg)
 
+	notificationStorage := storage.NewNotificationStorage(pg)
+	// order is important
+	bot.commands = []command.BotCommand{
+		&command.StartCommand{},
+		&command.HelpCommand{},
+		&command.SupportCommand{},
+		command.NewNotificationCommand(notificationStorage),
+		command.NewNotifyAllCommand(bot.userStorage, bot.msgQueue),
+		&command.NotFoundCommand{},
+	}
+
+	bot.notificationManager = notification.NewNotificationManager(bot.msgQueue, notificationStorage, cbStatStorage)
 	return bot
 
 }
@@ -83,6 +100,10 @@ func (b *Bot) Start(ctx context.Context) error {
 	updates := b.botAPI.GetUpdatesChan(u)
 	go b.loop(updates)
 
+	if err := b.notificationManager.Start(b.ctx); err != nil {
+		return err
+	}
+
 	b.started = true
 
 	return nil
@@ -95,6 +116,9 @@ func (b *Bot) Stop(timeout time.Duration) error {
 	if !b.started || b.stopped {
 		return errors.New("invalid state")
 	}
+
+	// todo
+	_ = b.notificationManager.Stop()
 
 	b.cancel()
 	select {
@@ -173,49 +197,13 @@ func (b *Bot) findProcessor(state entities.State) (processor.Processor, error) {
 	return nil, errors.New("not found")
 }
 
-func (b *Bot) processCommand(user entities.User, command string, arguments string) {
-	switch command {
-	case "start":
-		msg := tgbotapi.NewMessage(user.UserID, "Добро пожаловать в RSL.CB бот. Используй клавиатуру внизу")
-		msg.ReplyMarkup = keyboards.MainMenuKeyboard
-		_, _ = b.botAPI.Send(msg)
-	case "notifyall":
-		if !user.HasSudo {
-			b.NotifySudo(user)
-			return
-		}
-		if err := b.NotifyAll(b.ctx, arguments); err != nil {
-			msg := tgbotapi.NewMessage(user.UserID, fmt.Sprintf("Ошибка: %v", err))
-			_, _ = b.botAPI.Send(msg)
-		}
-	default:
-		b.NotifyNotFound(user)
-	}
-}
-
-func (b *Bot) NotifySudo(user entities.User) {
-	msg := tgbotapi.NewMessage(user.UserID, "Для данной команды требуются супер права")
-	_, _ = b.botAPI.Send(msg)
-}
-
-func (b *Bot) NotifyNotFound(user entities.User) {
-	msg := tgbotapi.NewMessage(user.UserID, "Команда не найдена")
-	_, _ = b.botAPI.Send(msg)
-}
-
-func (b *Bot) NotifyAll(ctx context.Context, arguments string) error {
-	allUsers, err := b.userStorage.All(b.ctx)
-	if err != nil {
-		return err
-	}
-	for _, user := range allUsers {
-		select {
-		case b.msgQueue <- []tgbotapi.Chattable{tgbotapi.NewMessage(user.UserID, arguments)}:
-		case <-ctx.Done():
-			return nil
+func (b *Bot) processCommand(user entities.User, commandName string, arguments string) ([]tgbotapi.Chattable, error) {
+	for _, cmd := range b.commands {
+		if cmd.CanHandle(commandName) {
+			return cmd.Handle(b.ctx, user, commandName, arguments)
 		}
 	}
-	return nil
+	return (&command.NotFoundCommand{}).Handle(b.ctx, user, commandName, arguments)
 }
 
 func (b *Bot) processUpdate(update tgbotapi.Update) {
@@ -259,18 +247,22 @@ func (b *Bot) processUpdate(update tgbotapi.Update) {
 		}
 	}
 
+	var msgs []tgbotapi.Chattable
+	var err error
 	if update.Message != nil && update.Message.Command() != "" {
-		b.processCommand(pm.User, update.Message.Command(), update.Message.CommandArguments())
+		msgs, err = b.processCommand(pm.User, update.Message.Command(), update.Message.CommandArguments())
 	} else {
-		msgs, err := b.processUserMessage(&pm)
-		if err != nil {
-			log.Printf("got error, while processing message: %v", err)
-			msgs = chatutils.TextTo(&pm, "Прозошла отвратительная ошибка, попробуй еще раз", keyboards.MainMenuKeyboard)
-		}
-		for _, msg := range msgs {
-			if _, err := b.botAPI.Send(msg); err != nil {
-				log.Printf("error while sending message: %v\n", err)
-			}
+		msgs, err = b.processUserMessage(&pm)
+	}
+
+	if err != nil {
+		log.Printf("got error, while processing message: %v", err)
+		msgs = chatutils.TextTo(&pm, "Произошла отвратительная ошибка, попробуй еще раз", keyboards.MainMenuKeyboard)
+	}
+
+	for _, msg := range msgs {
+		if _, err := b.botAPI.Send(msg); err != nil {
+			log.Printf("error while sending message: %v\n", err)
 		}
 	}
 }

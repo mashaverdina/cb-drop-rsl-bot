@@ -36,6 +36,14 @@ func TextTo(msg Message, text string, markup interface{}) []tgbotapi.Chattable {
 	return []tgbotapi.Chattable{resp}
 }
 
+func TextToNoMarkdown(msg Message, text string, markup interface{}) []tgbotapi.Chattable {
+	resp := tgbotapi.NewMessage(msg.Chat(), text)
+	if markup != nil {
+		resp.ReplyMarkup = markup
+	}
+	return []tgbotapi.Chattable{resp}
+}
+
 func DisableKeyboardAndSendNew(msg MessageWithOldVersion, text string, markup interface{}) []tgbotapi.Chattable {
 	return JoinResp(
 		EditTo(msg, msg.Original(), nil),
@@ -56,4 +64,12 @@ func JoinResp(resps ...[]tgbotapi.Chattable) []tgbotapi.Chattable {
 		result = append(result, arr...)
 	}
 	return result
+}
+
+type SimpleMessage struct {
+	ChatID int64
+}
+
+func (sm *SimpleMessage) Chat() int64 {
+	return sm.ChatID
 }

@@ -108,3 +108,26 @@ func (s *CbStatStorage) UserStat(ctx context.Context, userID int64, levels []int
 
 	return states, err
 }
+
+func (s *CbStatStorage) ActiveUsersAt(date time.Time) ([]int64, error) {
+	y, m, d := date.Date()
+	date = time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+	active := make([]int64, 0)
+	err := s.pg.ExecuteInTransaction(hasql.Primary, func(db *gorm.DB) error {
+		rows, err := db.Raw("select distinct user_id from user_cb_stats where related_to = ?", date).Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var i int64
+			err := rows.Scan(&i)
+			if err != nil {
+				return err
+			}
+			active = append(active, i)
+		}
+		return nil
+	})
+	return active, err
+}
