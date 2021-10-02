@@ -33,7 +33,7 @@ func (c *NotificationCommand) Handle(ctx context.Context, user entities.User, co
 
 	n, err := c.notificationStorage.GetByAlias(arguments)
 	if err != nil || n.Alias == "" {
-		return chatutils.TextTo(&user, fmt.Sprintf("Нотификации с названием \"%s\" не найдено", arguments), keyboards.MainMenuKeyboard), nil
+		return chatutils.TextToNoMarkdown(&user, fmt.Sprintf("Нотификации с названием \"%s\" не найдено", arguments), keyboards.MainMenuKeyboard), nil
 	}
 	if strings.HasPrefix(commandText, NotificationOn) {
 		if err := c.notificationStorage.EnableNotification(entities.DisabledNotifications{
