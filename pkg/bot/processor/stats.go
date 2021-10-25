@@ -3,10 +3,8 @@ package processor
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
-
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"strings"
 
 	chatutils "vkokarev.com/rslbot/pkg/chat_utils"
 	"vkokarev.com/rslbot/pkg/entities"
@@ -14,7 +12,6 @@ import (
 	"vkokarev.com/rslbot/pkg/keyboards"
 	"vkokarev.com/rslbot/pkg/messages"
 	"vkokarev.com/rslbot/pkg/storage"
-	"vkokarev.com/rslbot/pkg/utils"
 )
 
 type StatsProcessor struct {
@@ -75,23 +72,11 @@ func (p *StatsProcessor) Handle(ctx context.Context, state entities.UserState, m
 		return state, resp, err
 	case messages.MonthStats:
 		state.State = entities.StateMonth
-		return state, chatutils.EditTo(msg, "📅 Выбери месяц", keyboards.ChooseMonthKeyboard()), nil
+		return state, chatutils.EditTo(msg, "📅 Выбери период времени", keyboards.ChooseMonthKeyboard()), nil
 	default:
 		return state, nil, UnknownResuest
 	}
 }
 
 func (p *StatsProcessor) CancelFor(userID int64) {
-}
-
-func mothInterval(month string) (time.Time, time.Time) {
-	mn := monthMap[month]
-	cy, cm, _ := utils.MskNow().Date()
-	if cm < mn {
-		cy = cy - 1
-	}
-
-	from := time.Date(cy, mn, 1, 0, 0, 0, 0, time.UTC)
-	to := from.AddDate(0, 1, -1)
-	return from, to
 }

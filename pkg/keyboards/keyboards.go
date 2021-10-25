@@ -75,7 +75,13 @@ var allMonth = []string{
 }
 
 func ChooseMonthKeyboard() *tgbotapi.InlineKeyboardMarkup {
-	markup := make([][]tgbotapi.InlineKeyboardButton, 0, 4)
+	markup := make([][]tgbotapi.InlineKeyboardButton, 0, 6)
+
+	markup = append(markup, tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(messages.Days30, messages.Days30),
+		tgbotapi.NewInlineKeyboardButtonData(messages.Days7, messages.Days7),
+	))
+
 	currentButtons := make([]tgbotapi.InlineKeyboardButton, 0, 3)
 
 	_, realMonth, _ := utils.MskNow().Date()
