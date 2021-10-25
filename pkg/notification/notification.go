@@ -10,7 +10,6 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"vkokarev.com/rslbot/pkg/bot/command"
 	chatutils "vkokarev.com/rslbot/pkg/chat_utils"
 	"vkokarev.com/rslbot/pkg/entities"
 	"vkokarev.com/rslbot/pkg/keyboards"
@@ -127,7 +126,7 @@ func (nm *NotificationManager) fireNotification(notification entities.Notificati
 		select {
 		case nm.msgQueue <- chatutils.TextToNoMarkdown(
 			&chatutils.SimpleMessage{user},
-			fmt.Sprintf("%s\nЧто бы больше не получать данное уведомление введи (нажми) /%s%s\nДля изменения времени скопируй: /%s%s 13:30", notification.Text, command.NotificationOff, notification.Alias, command.NotificationOff, notification.Alias),
+			fmt.Sprintf("%s\nЧто бы больше не получать данное уведомление введи (нажми) /%s%s\nДля изменения времени скопируй: /%s%s 13:30", notification.Text, utils.NotificationOff, notification.Alias, utils.NotificationOff, notification.Alias),
 			keyboards.MainMenuKeyboard):
 		case <-nm.ctx.Done():
 			log.Println(fmt.Sprintf("notification %s was canceled", notification.Alias))
@@ -156,12 +155,12 @@ func (nm *NotificationManager) removeActiveUsers(users []int64) ([]int64, error)
 	return result, nil
 }
 
-func (nm *NotificationManager) AssignDefaultNotifications(user entities.User) error {
+func (nm *NotificationManager) AssignDefaultNotifications(userID int64) error {
 	for _, n := range nm.defaultNotifications {
-		if err := nm.notificationStorage.DisableNotification(user, n); err != nil {
+		if err := nm.notificationStorage.DisableNotification(userID, n); err != nil {
 			return err
 		}
-		if err := nm.notificationStorage.EnableNotification(user, n); err != nil {
+		if err := nm.notificationStorage.EnableNotification(userID, n); err != nil {
 			return err
 		}
 	}

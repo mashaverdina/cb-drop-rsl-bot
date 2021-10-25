@@ -67,6 +67,8 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
 	bot.userStorage = storage.NewUserStorage(pg)
 
 	notificationStorage := storage.NewNotificationStorage(pg)
+	bot.notificationManager = notification.NewNotificationManager(bot.msgQueue, notificationStorage, cbStatStorage)
+
 	// order is important
 	bot.commands = []command.BotCommand{
 		&command.StartCommand{},
@@ -75,10 +77,10 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
 		&command.SupportCommand{},
 		command.NewNotificationCommand(notificationStorage),
 		command.NewNotifyAllCommand(bot.userStorage, bot.msgQueue),
+		command.NewMigrateCommand(notificationStorage, bot.notificationManager),
 		&command.NotFoundCommand{},
 	}
 
-	bot.notificationManager = notification.NewNotificationManager(bot.msgQueue, notificationStorage, cbStatStorage)
 	return bot
 
 }
@@ -225,7 +227,7 @@ func (b *Bot) processUpdate(update tgbotapi.Update) {
 			if err != nil {
 				user = entities.User{UserID: update.Message.Chat.ID}
 			}
-			if err := b.notificationManager.AssignDefaultNotifications(user); err != nil {
+			if err := b.notificationManager.AssignDefaultNotifications(user.UserID); err != nil {
 				log.Printf(fmt.Sprintf("failed to assign default notifications: %v", err))
 			}
 		}
