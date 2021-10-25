@@ -77,8 +77,8 @@ func (nm *NotificationManager) Stop() error {
 }
 
 func (nm *NotificationManager) loop() {
-	// ticker := time.NewTicker(time.Minute)
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(time.Minute)
+	// ticker := time.NewTicker(time.Second)
 	for {
 		select {
 		case <-ticker.C:
