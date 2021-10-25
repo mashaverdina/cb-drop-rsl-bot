@@ -23,6 +23,10 @@ func (p *MainProcessor) Handle(ctx context.Context, state entities.UserState, ms
 		state.State = entities.StateCb6
 		resp := chatutils.TextTo(msg, "Что упало с 6го КБ?", keyboards.AddDropInlineKeyboard)
 		return state, resp, nil
+	case messages.Cb4:
+		state.State = entities.StateCb4
+		resp := chatutils.TextTo(msg, "Что упало с 4го КБ?", keyboards.AddDropInlineKeyboard)
+		return state, resp, nil
 	case messages.Stats:
 		state.State = entities.StateStats
 		resp := chatutils.TextTo(msg, "Что тебе показать?", keyboards.StatsKeyboard)

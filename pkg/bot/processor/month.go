@@ -35,7 +35,7 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 		state.State = entities.StateStats
 		replyMsgLines := []string{}
 		from, to := mothInterval(msg.Text)
-		for i := 5; i <= 6; i++ {
+		for i := 4; i <= 6; i++ {
 			monthStat, err := p.cbStatStorage.UserStat(ctx, msg.User.UserID, []int{i}, from, to)
 			if err != nil || len(monthStat) == 0 {
 				replyMsgLines = append(replyMsgLines, fmt.Sprintf("Статистики по *%d кб* за *%s* пока нет", i, msg.Text))

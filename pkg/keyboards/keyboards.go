@@ -15,7 +15,10 @@ var MainMenuKeyboard = tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButton(messages.Cb6),
 	),
 	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton(messages.Cb4),
 		tgbotapi.NewKeyboardButton(messages.Stats),
+	),
+	tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton(messages.Help),
 	),
 )

@@ -12,6 +12,7 @@ const (
 	StateMainMenu = "main-menu"
 	StateCb6      = "cb-6"
 	StateCb5      = "cb-5"
+	StateCb4      = "cb-4"
 	StateStats    = "stats"
 	StateMonth    = "month"
 )

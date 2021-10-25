@@ -36,13 +36,20 @@ func (p *StatsProcessor) LastStat(ctx context.Context, msg *ProcessingMessage, r
 	if err != nil {
 		return nil, err
 	}
+	msgs := []string{header}
+	if resource == "void_shard" {
+		lastFrom4, err := p.cbStatStorage.LastResource(ctx, msg.User.UserID, 4, resource)
+		if err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, fmt.Sprintf("С 4го -- %s", formatting.TimePast(lastFrom4)))
+	}
+
+	msgs = append(msgs, fmt.Sprintf("С 5го -- %s", formatting.TimePast(lastFrom5)),
+		fmt.Sprintf("С 6го -- %s", formatting.TimePast(lastFrom6)))
 
 	resp := chatutils.JoinResp(
-		chatutils.EditTo(msg, strings.Join([]string{
-			header,
-			fmt.Sprintf("С 5го -- %s", formatting.TimePast(lastFrom5)),
-			fmt.Sprintf("С 6го -- %s", formatting.TimePast(lastFrom6)),
-		}, "\n"), nil),
+		chatutils.EditTo(msg, strings.Join(msgs, "\n"), nil),
 		chatutils.TextTo(msg, "Что тебе показать?", &keyboards.StatsKeyboard),
 	)
 	return resp, nil
