@@ -19,13 +19,14 @@ import (
 )
 
 type NotificationManager struct {
-	msgQueue            chan<- []tgbotapi.Chattable
-	notificationStorage *storage.NotificationStorage
-	cbStatStorage       *storage.CbStatStorage
-	m                   sync.Mutex
-	started             bool
-	cancel              context.CancelFunc
-	ctx                 context.Context
+	msgQueue             chan<- []tgbotapi.Chattable
+	notificationStorage  *storage.NotificationStorage
+	cbStatStorage        *storage.CbStatStorage
+	m                    sync.Mutex
+	started              bool
+	cancel               context.CancelFunc
+	ctx                  context.Context
+	defaultNotifications []entities.Notification
 }
 
 func NewNotificationManager(msgQueue chan<- []tgbotapi.Chattable, notificationStorage *storage.NotificationStorage, cbStatStorage *storage.CbStatStorage) *NotificationManager {
@@ -47,6 +48,18 @@ func (nm *NotificationManager) Start(ctx context.Context) error {
 		return errors.New("started already")
 	}
 	nm.ctx, nm.cancel = context.WithCancel(ctx)
+
+	defaultNotifications := make([]entities.Notification, 0)
+	fillDropNotification, err := nm.notificationStorage.GetByAlias("fill_drop")
+	if err != nil {
+		return err
+	}
+	fillDropNotification, err = nm.notificationStorage.LoadFire(fillDropNotification.NotificationID, 13, 7)
+	if err != nil {
+		return err
+	}
+	nm.defaultNotifications = append(defaultNotifications, fillDropNotification)
+
 	go nm.loop()
 	nm.started = true
 	return nil
@@ -64,8 +77,8 @@ func (nm *NotificationManager) Stop() error {
 }
 
 func (nm *NotificationManager) loop() {
-	ticker := time.NewTicker(time.Minute)
-	// ticker := time.NewTicker(time.Second)
+	// ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(time.Second)
 	for {
 		select {
 		case <-ticker.C:
@@ -87,8 +100,9 @@ func (nm *NotificationManager) loop() {
 
 func (nm *NotificationManager) fireNotification(notification entities.Notification) {
 	log.Println("notification", notification.Alias, "started")
+
 	notification.LastFireTime = utils.MskNow()
-	err := nm.notificationStorage.Update(notification)
+	err := nm.notificationStorage.UpdateFire(notification)
 	if err != nil {
 		log.Println(fmt.Sprintf("error, can't set fire on notification: %v", err))
 		return
@@ -101,17 +115,19 @@ func (nm *NotificationManager) fireNotification(notification entities.Notificati
 	}
 
 	// todo fix that hack!
-	users, err = nm.removeActiveUsers(users)
-	if err != nil {
-		log.Println(fmt.Sprintf("error, can't remove active users: %v", err))
-		return
+	if notification.RemoveActiveUsers {
+		users, err = nm.removeActiveUsers(users)
+		if err != nil {
+			log.Println(fmt.Sprintf("error, can't remove active users: %v", err))
+			return
+		}
 	}
 
 	for _, user := range users {
 		select {
 		case nm.msgQueue <- chatutils.TextToNoMarkdown(
 			&chatutils.SimpleMessage{user},
-			fmt.Sprintf("%s\nЧто бы больше не получать данное уведомление введи (нажми) /%s%s", notification.Text, command.NotificationOff, notification.Alias),
+			fmt.Sprintf("%s\nЧто бы больше не получать данное уведомление введи (нажми) /%s%s\nДля изменения времени скопируй: /%s%s 13:30", notification.Text, command.NotificationOff, notification.Alias, command.NotificationOff, notification.Alias),
 			keyboards.MainMenuKeyboard):
 		case <-nm.ctx.Done():
 			log.Println(fmt.Sprintf("notification %s was canceled", notification.Alias))
@@ -138,4 +154,16 @@ func (nm *NotificationManager) removeActiveUsers(users []int64) ([]int64, error)
 		}
 	}
 	return result, nil
+}
+
+func (nm *NotificationManager) AssignDefaultNotifications(user entities.User) error {
+	for _, n := range nm.defaultNotifications {
+		if err := nm.notificationStorage.DisableNotification(user, n); err != nil {
+			return err
+		}
+		if err := nm.notificationStorage.EnableNotification(user, n); err != nil {
+			return err
+		}
+	}
+	return nil
 }

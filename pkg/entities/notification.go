@@ -7,19 +7,35 @@ import (
 )
 
 type Notification struct {
-	ID           int64 `gorm:"primaryKey;index:planned_index;autoIncrement:true"`
-	Alias        string
-	Text         string
+	NotificationID    int64 `gorm:"primaryKey;index:planned_index;autoIncrement:true"`
+	FireID            int64
+	Alias             string
+	ShortName         string
+	Text              string
+	FireAt            time.Time
+	LastFireTime      time.Time
+	RemoveActiveUsers bool
+}
+
+type NotificationFires struct {
+	FireID       int64 `gorm:"primaryKey;index:planned_index;autoIncrement:true"`
 	FireAt       time.Time
 	LastFireTime time.Time
 }
 
+type NotificationUsers struct {
+	UserID int64
+	FireID int64
+}
 type DisabledNotifications struct {
 	UserID         int64 `gorm:"primaryKey"`
 	NotificationID int64 `gorm:"primaryKey"`
 }
 
 func (n *Notification) ShouldBeStarted() bool {
+	if n.FireID == 416 {
+		println("qq")
+	}
 	now := utils.MskNow()
 	nowYear, nowMonth, nowDay := now.Date()
 
@@ -31,7 +47,6 @@ func (n *Notification) ShouldBeStarted() bool {
 	lastFireYear, lastFireMonth, lastFireDay := n.LastFireTime.Date()
 
 	return !(lastFireDay == nowDay && lastFireMonth == nowMonth && lastFireYear == nowYear)
-
 }
 
 func isInsideTimeInterval(val, left, right time.Time) bool {

@@ -225,6 +225,9 @@ func (b *Bot) processUpdate(update tgbotapi.Update) {
 			if err != nil {
 				user = entities.User{UserID: update.Message.Chat.ID}
 			}
+			if err := b.notificationManager.AssignDefaultNotifications(user); err != nil {
+				log.Printf(fmt.Sprintf("failed to assign default notifications: %v", err))
+			}
 		}
 		pm = processor.ProcessingMessage{
 			User:    user,

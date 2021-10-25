@@ -74,7 +74,7 @@ func (p *MainProcessor) Handle(ctx context.Context, state entities.UserState, ms
 
 func (p *MainProcessor) CanHandle(msg *ProcessingMessage) bool {
 	switch msg.Text {
-	case messages.Cb5, messages.Cb6, messages.Stats, messages.Help:
+	case messages.Cb4, messages.Cb5, messages.Cb6, messages.Stats, messages.Help:
 		return true
 	default:
 		return false
