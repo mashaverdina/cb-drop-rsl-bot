@@ -33,9 +33,6 @@ type DisabledNotifications struct {
 }
 
 func (n *Notification) ShouldBeStarted() bool {
-	if n.FireID == 416 {
-		println("qq")
-	}
 	now := utils.MskNow()
 	nowYear, nowMonth, nowDay := now.Date()
 
