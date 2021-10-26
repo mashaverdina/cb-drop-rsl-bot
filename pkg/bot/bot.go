@@ -75,6 +75,7 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
 		&command.HelpCommand{},
 		&command.FAQCommand{},
 		&command.SupportCommand{},
+		command.NewClanCommand(bot.userStorage),
 		command.NewNotificationCommand(notificationStorage),
 		command.NewNotifyAllCommand(bot.userStorage, bot.msgQueue),
 		command.NewMigrateCommand(notificationStorage, bot.notificationManager),
