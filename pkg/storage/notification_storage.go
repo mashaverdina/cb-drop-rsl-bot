@@ -93,10 +93,10 @@ func (s *NotificationStorage) LoadFire(notificationID int64, hour, minutes int) 
 	return notification, err
 }
 
-func (s *NotificationStorage) NonDisabledUsers() ([]int64, error) {
+func (s *NotificationStorage) AllUsers() ([]int64, error) {
 	userIDs := make([]int64, 0)
 	err := s.pg.ExecuteInTransaction(hasql.Primary, func(db *gorm.DB) error {
-		rows, err := db.Raw("select user_id from users where user_id not in (select user_id from disabled_notifications)").Rows()
+		rows, err := db.Raw("select user_id from users").Rows()
 		if err != nil {
 			return err
 		}

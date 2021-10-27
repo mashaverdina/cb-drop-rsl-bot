@@ -46,18 +46,32 @@ func CbStatFields(stat entities.UserCbStat) []cbStatPair {
 	}
 }
 
-func VerticalCbStat(stat entities.UserCbStat) string {
+type TopFunc func(string, int) string
+
+func VerticalCbStat(stat entities.UserCbStat, topFuncs []TopFunc) string {
 	lines := []string{}
 	for _, p := range CbStatFields(stat) {
 		line := fmt.Sprintf("%s --- %d", p.Title, p.Value)
+
+		topStatLines := make([]string, 0)
+		for _, topFunc := range topFuncs {
+			if topLine := topFunc(p.Title, p.Value); topLine != "" {
+				topStatLines = append(topStatLines, topLine)
+			}
+		}
+
+		if len(topStatLines) > 0 {
+			line = line + " (" + strings.Join(topStatLines, ", ") + ")"
+		}
+
 		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")
 }
 
-func VerticalCbStatWithHeader(stat entities.UserCbStat, headerPattern string, args ...interface{}) string {
+func VerticalCbStatWithHeader(stat entities.UserCbStat, topFuncs []TopFunc, headerPattern string, args ...interface{}) string {
 	header := fmt.Sprintf(headerPattern, args...)
-	return header + "\n" + VerticalCbStat(stat)
+	return header + "\n" + VerticalCbStat(stat, topFuncs)
 }
 
 func HorizontalCbStat(stat entities.UserCbStat, mapping map[string]string) string {

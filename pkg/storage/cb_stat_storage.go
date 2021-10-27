@@ -131,3 +131,14 @@ func (s *CbStatStorage) ActiveUsersAt(date time.Time) ([]int64, error) {
 	})
 	return active, err
 }
+
+func (s *CbStatStorage) FullStat(from, to time.Time, minDays int) ([]entities.UserCbStat, error) {
+	userStats := make([]entities.UserCbStat, 0)
+	err := s.pg.ExecuteInTransaction(hasql.Primary, func(db *gorm.DB) error {
+		return db.Model(&entities.UserCbStat{}).Raw(
+			"select * from (select count(*) as days,user_cb_stats.user_id, level,  sum(ancient_shard) as ancient_shard, sum(void_shard) as void_shard, sum(sacred_shard) as sacred_shard, sum(epic_tome) as epic_tome, sum(leg_tome) as leg_tome from user_cb_stats join users on user_cb_stats.user_id=users.user_id  where related_to>=? and related_to<=? group by user_cb_stats.user_id, level) as tmp where tmp.days >= ?",
+			from, to, minDays,
+		).Scan(&userStats).Error
+	})
+	return userStats, err
+}

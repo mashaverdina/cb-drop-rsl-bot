@@ -3,9 +3,11 @@ package processor
 import (
 	"context"
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"strings"
 	"time"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"vkokarev.com/rslbot/pkg/globalstat"
 	"vkokarev.com/rslbot/pkg/utils"
 
 	chatutils "vkokarev.com/rslbot/pkg/chat_utils"
@@ -16,13 +18,23 @@ import (
 	"vkokarev.com/rslbot/pkg/storage"
 )
 
+type PeriodType int
+
+const (
+	monthPeriod PeriodType = iota
+	days7Period
+	days30Period
+)
+
 type MonthProcessor struct {
-	cbStatStorage *storage.CbStatStorage
+	cbStatStorage     *storage.CbStatStorage
+	globalStatManager *globalstat.GlobalStatManager
 }
 
-func NewMonthProcessor(cbStatStorage *storage.CbStatStorage) *MonthProcessor {
+func NewMonthProcessor(cbStatStorage *storage.CbStatStorage, globalStatManager *globalstat.GlobalStatManager) *MonthProcessor {
 	return &MonthProcessor{
-		cbStatStorage: cbStatStorage,
+		cbStatStorage:     cbStatStorage,
+		globalStatManager: globalStatManager,
 	}
 }
 
@@ -34,8 +46,8 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 		return state, resp, nil
 	case messages.Jan, messages.Feb, messages.Mar, messages.Apr, messages.May, messages.Jun, messages.Jul, messages.Aug, messages.Sep, messages.Oct, messages.Nov, messages.Dec:
 		state.State = entities.StateStats
-		from, to := monthInterval(msg.Text)
-		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, msg.Text)
+		from, to := utils.MonthInterval(monthMap[msg.Text])
+		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, msg.Text, monthPeriod)
 
 		resp := chatutils.JoinResp(
 			chatutils.RemoveAndSendNew(msg, replyMsg, nil),
@@ -44,8 +56,8 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 		return state, resp, nil
 	case messages.Days30:
 		state.State = entities.StateStats
-		from, to := lastDaysInterval(30)
-		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 30 дней")
+		from, to := utils.LastDaysInterval(30)
+		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 30 дней", days30Period)
 
 		resp := chatutils.JoinResp(
 			chatutils.RemoveAndSendNew(msg, replyMsg, nil),
@@ -54,8 +66,8 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 		return state, resp, nil
 	case messages.Days7:
 		state.State = entities.StateStats
-		from, to := lastDaysInterval(7)
-		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 7 дней")
+		from, to := utils.LastDaysInterval(7)
+		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 7 дней", days7Period)
 
 		resp := chatutils.JoinResp(
 			chatutils.RemoveAndSendNew(msg, replyMsg, nil),
@@ -70,7 +82,7 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 func (p *MonthProcessor) CancelFor(userID int64) {
 }
 
-func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from time.Time, to time.Time, text string) string {
+func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from time.Time, to time.Time, text string, periodType PeriodType) string {
 	replyMsgLines := []string{}
 	for i := 4; i <= 6; i++ {
 		monthStat, err := p.cbStatStorage.UserStat(ctx, userID, []int{i}, from, to)
@@ -85,28 +97,29 @@ func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from t
 		}
 
 		monthStatCombined, err := p.cbStatStorage.UserStatCombined(ctx, userID, []int{i}, from, to)
+
 		if err == nil {
-			replyMsgLines = append(replyMsgLines, formatting.VerticalCbStat(monthStatCombined), "")
+			replyMsgLines = append(replyMsgLines, formatting.VerticalCbStat(monthStatCombined, []formatting.TopFunc{
+				func(level int) formatting.TopFunc {
+					return func(itemType string, itemCount int) string {
+						var top float64 = 0.
+						var err error = nil
+						switch periodType {
+						case monthPeriod:
+							top, err = p.globalStatManager.TopForMonth(from.Month(), level, itemType, itemCount)
+						case days7Period:
+							top, err = p.globalStatManager.TopFor7Days(level, itemType, itemCount)
+						case days30Period:
+							top, err = p.globalStatManager.TopFor30Days(level, itemType, itemCount)
+						}
+						if err != nil {
+							return ""
+						}
+						return fmt.Sprintf("лучше чем у  %.2f%% игроков", top*100)
+					}
+				}(i),
+			}), "")
 		}
 	}
 	return strings.Join(replyMsgLines, "\n")
-}
-
-func monthInterval(month string) (time.Time, time.Time) {
-	mn := monthMap[month]
-	cy, cm, _ := utils.MskNow().Date()
-	if cm < mn {
-		cy = cy - 1
-	}
-
-	from := time.Date(cy, mn, 1, 0, 0, 0, 0, time.UTC)
-	to := from.AddDate(0, 1, -1)
-	return from, to
-}
-
-func lastDaysInterval(daysN int) (time.Time, time.Time) {
-	cy, cm, cd := utils.MskNow().Date()
-	to := time.Date(cy, cm, cd, 0, 0, 0, 0, time.UTC)
-	from := to.AddDate(0, 0, -(daysN - 1))
-	return from, to
 }

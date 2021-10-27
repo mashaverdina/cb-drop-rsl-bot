@@ -33,7 +33,7 @@ func NewCbProcessor(level int, storage *storage.CbStatStorage) *CbProcessor {
 
 func (p *CbProcessor) Handle(ctx context.Context, state entities.UserState, msg *ProcessingMessage) (entities.UserState, []tgbotapi.Chattable, error) {
 	format := func(cbStat entities.UserCbStat) string {
-		return formatting.VerticalCbStatWithHeader(cbStat, "Твой дроп с *%d КБ*", p.level)
+		return formatting.VerticalCbStatWithHeader(cbStat, []formatting.TopFunc{}, "Твой дроп с *%d КБ*", p.level)
 	}
 
 	cbStat := p.getOrCreateStats(state.UserID)

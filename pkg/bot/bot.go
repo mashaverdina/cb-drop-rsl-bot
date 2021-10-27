@@ -9,6 +9,7 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"vkokarev.com/rslbot/pkg/globalstat"
 
 	"vkokarev.com/rslbot/pkg/bot/command"
 	"vkokarev.com/rslbot/pkg/bot/processor"
@@ -36,6 +37,7 @@ type Bot struct {
 	stopped             bool
 	numWorkers          uint64
 	notificationManager *notification.NotificationManager
+	globalStatManager   *globalstat.GlobalStatManager
 }
 
 func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
@@ -56,13 +58,15 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
 	}
 
 	cbStatStorage := storage.NewCbStatStorage(pg)
+	bot.globalStatManager = globalstat.NewGlobalStatManager(cbStatStorage)
+
 	bot.processors = map[entities.State]processor.Processor{
 		entities.StateMainMenu: &processor.MainProcessor{},
 		entities.StateCb4:      processor.NewCbProcessor(4, cbStatStorage),
 		entities.StateCb5:      processor.NewCbProcessor(5, cbStatStorage),
 		entities.StateCb6:      processor.NewCbProcessor(6, cbStatStorage),
 		entities.StateStats:    processor.NewStatsProcessor(cbStatStorage),
-		entities.StateMonth:    processor.NewMonthProcessor(cbStatStorage),
+		entities.StateMonth:    processor.NewMonthProcessor(cbStatStorage, bot.globalStatManager),
 	}
 	bot.userStorage = storage.NewUserStorage(pg)
 
@@ -109,6 +113,9 @@ func (b *Bot) Start(ctx context.Context) error {
 		return err
 	}
 
+	if err := b.globalStatManager.Start(b.ctx); err != nil {
+		return err
+	}
 	b.started = true
 
 	return nil
@@ -124,6 +131,8 @@ func (b *Bot) Stop(timeout time.Duration) error {
 
 	// todo
 	_ = b.notificationManager.Stop()
+
+	_ = b.globalStatManager.Stop()
 
 	b.cancel()
 	select {
