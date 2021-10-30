@@ -18,17 +18,17 @@ func (p *MainProcessor) Handle(ctx context.Context, state entities.UserState, ms
 	case messages.Cb5:
 		state.ProcType = entities.StateCb5
 		state.Options.WithLevels(5)
-		resp := chatutils.TextTo(msg, "Что упало с 5го КБ?", keyboards.AddDropInlineKeyboard)
+		resp := chatutils.TextTo(msg, "Что упало с 5го КБ?", keyboards.ChooseAddDropInlineKeyboard(5))
 		return state, resp, nil
 	case messages.Cb6:
 		state.ProcType = entities.StateCb6
 		state.Options.WithLevels(6)
-		resp := chatutils.TextTo(msg, "Что упало с 6го КБ?", keyboards.AddDropInlineKeyboard)
+		resp := chatutils.TextTo(msg, "Что упало с 6го КБ?", keyboards.ChooseAddDropInlineKeyboard(6))
 		return state, resp, nil
 	case messages.Cb4:
 		state.ProcType = entities.StateCb4
 		state.Options.WithLevels(4)
-		resp := chatutils.TextTo(msg, "Что упало с 4го КБ?", keyboards.AddDropInlineKeyboard)
+		resp := chatutils.TextTo(msg, "Что упало с 4го КБ?", keyboards.ChooseAddDropInlineKeyboard(4))
 		return state, resp, nil
 	case messages.Stats:
 		state.ProcType = entities.StateStats
@@ -57,10 +57,10 @@ func (p *MainProcessor) Handle(ctx context.Context, state entities.UserState, ms
 			"– Если ты еще не нажал(а) на кнопку _\"✅ ОК\"_, то просто нажми на кнопку _\"🔄 Заново\"_ и снова введи дроп.\n" +
 			"– Если ты сегодня уже отправил(а) информацию о боте, то просто снова отправь дроп, и он перезапишет старый.\n" +
 			"⚠️ Обрати внимание, что дроп можно обновить только до полуночи по МСК.\n\n" +
-			"*Мне ничего не упало с 5 кб, что делать?*\n" +
+			"*Мне ничего не упало с 5/4 кб, что делать?*\n" +
 			"_Записывать пустой дроп важно, это поможет мне правильно считать статистику._" +
-			"1. Нажми на кнопку _\"😈 Добавить дроп с 5 КБ\"_.\n" +
-			"2. Нажми на кнопку _\"✅ ОК\"_.\n\n" +
+			"1. Нажми на кнопку _\"😈/👾 Добавить дроп с 5/4 КБ\"_.\n" +
+			"2. Нажми на кнопку _\"😭 Ничего\"_.\n\n" +
 			"*Как записать дроп за вчера (неделю назад, 01.01.200)?*\n" +
 			"Никак. Дроп записывается в текущую дату, причем дата обновляется в полночь по МСК.\n\n" +
 			"*Я бью 1/2/3/4 КБ, куда добавить мой дроп?*\n" +

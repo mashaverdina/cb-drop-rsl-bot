@@ -25,6 +25,7 @@ const (
 	SacredShard  = "💛 Сакрал"
 	EpicTome     = "📘 Эпик том"
 	LegTome      = "📙 Лег том"
+	Nothing      = "😭 Ничего"
 )
 
 // stats menu

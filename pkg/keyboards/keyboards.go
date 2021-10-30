@@ -23,22 +23,39 @@ var MainMenuKeyboard = tgbotapi.NewReplyKeyboard(
 	),
 )
 
-var AddDropInlineKeyboard = tgbotapi.NewInlineKeyboardMarkup(
-	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(messages.AncientShard, messages.AncientShard),
-		tgbotapi.NewInlineKeyboardButtonData(messages.VoidShard, messages.VoidShard),
-		tgbotapi.NewInlineKeyboardButtonData(messages.SacredShard, messages.SacredShard),
-	),
-	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(messages.EpicTome, messages.EpicTome),
-		tgbotapi.NewInlineKeyboardButtonData(messages.LegTome, messages.LegTome),
-		tgbotapi.NewInlineKeyboardButtonData(messages.Clear, messages.Clear),
-	),
-	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(messages.Approve, messages.Approve),
-		tgbotapi.NewInlineKeyboardButtonData(messages.Reject, messages.Reject),
-	),
-)
+func ChooseAddDropInlineKeyboard(level int) *tgbotapi.InlineKeyboardMarkup {
+	markup := make([][]tgbotapi.InlineKeyboardButton, 0, 3)
+
+	// 1st row: shards
+	currentButtons := make([]tgbotapi.InlineKeyboardButton, 0, 3)
+	currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(messages.AncientShard, messages.AncientShard))
+	currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(messages.VoidShard, messages.VoidShard))
+	if level != 4 {
+		currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(messages.SacredShard, messages.SacredShard))
+	}
+	markup = append(markup, currentButtons)
+
+	// 2st row: tomes and clear
+	currentButtons = make([]tgbotapi.InlineKeyboardButton, 0, 3)
+	currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(messages.EpicTome, messages.EpicTome))
+	if level != 4 {
+		currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(messages.LegTome, messages.LegTome))
+	}
+	currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(messages.Clear, messages.Clear))
+	markup = append(markup, currentButtons)
+
+	// 3rd row: ok, nothing, cancel
+	currentButtons = make([]tgbotapi.InlineKeyboardButton, 0, 3)
+	currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(messages.Approve, messages.Approve))
+	if level != 6 {
+		currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(messages.Nothing, messages.Nothing))
+	}
+	currentButtons = append(currentButtons, tgbotapi.NewInlineKeyboardButtonData(messages.Reject, messages.Reject))
+	markup = append(markup, currentButtons)
+
+	r := tgbotapi.NewInlineKeyboardMarkup(markup...)
+	return &r
+}
 
 var StatsKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(

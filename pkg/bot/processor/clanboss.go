@@ -61,6 +61,22 @@ func (p *CbProcessor) Handle(ctx context.Context, state entities.UserState, msg 
 			chatutils.TextTo(msg, "Записано", keyboards.MainMenuKeyboard),
 		)
 		return state, resp, nil
+	case messages.Nothing:
+		state.ProcType = entities.StateMainMenu
+		cbStat := entities.NewCbUserState(state.UserID, p.level)
+		err := p.storage.Save(ctx, &cbStat)
+		if err != nil {
+			return entities.UserState{}, nil, fmt.Errorf("cb state db update failed: %v", err)
+		}
+
+		p.updateStats(entities.NewCbUserState(state.UserID, p.level))
+
+		state.Options.Clear()
+		resp := chatutils.JoinResp(
+			chatutils.EditTo(msg, format(cbStat), nil),
+			chatutils.TextTo(msg, "Записано", keyboards.MainMenuKeyboard),
+		)
+		return state, resp, nil
 	case messages.Clear:
 		cbStat = entities.NewCbUserState(state.UserID, p.level)
 	case messages.LegTome:
@@ -79,7 +95,7 @@ func (p *CbProcessor) Handle(ctx context.Context, state entities.UserState, msg 
 
 	p.updateStats(cbStat)
 
-	resp := chatutils.EditTo(msg, format(cbStat), &keyboards.AddDropInlineKeyboard)
+	resp := chatutils.EditTo(msg, format(cbStat), keyboards.ChooseAddDropInlineKeyboard(state.Options.Levels[0]))
 	return state, resp, nil
 
 }
