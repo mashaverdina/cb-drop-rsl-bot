@@ -61,6 +61,7 @@ func (p *StatsProcessor) Handle(ctx context.Context, state entities.UserState, m
 		return state, resp, err
 	case messages.MonthStats:
 		state.ProcType = entities.StateMonth
+		state.Options.WithLevels(4, 5, 6)
 		return state, chatutils.EditTo(msg, "📅 Выбери период времени", keyboards.ChooseMonthKeyboard()), nil
 	default:
 		return state, nil, UnknownResuest
