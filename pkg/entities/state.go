@@ -2,6 +2,7 @@ package entities
 
 import (
 	"time"
+
 	"vkokarev.com/rslbot/pkg/utils"
 )
 
@@ -24,7 +25,8 @@ type UserState struct {
 }
 
 type Options struct {
-	Levels []int
+	Levels       []int
+	ShowFullStat bool
 }
 
 func (o *Options) Clear() {
@@ -37,6 +39,14 @@ func (o *Options) DropLevels() {
 
 func (o *Options) WithLevels(levels ...int) {
 	o.Levels = levels
+}
+
+func (o *Options) DropShowFullStat() {
+	o.ShowFullStat = false
+}
+
+func (o *Options) WithShowFullStat(showFullStat bool) {
+	o.ShowFullStat = showFullStat
 }
 
 func NewUserState(userID int64) UserState {

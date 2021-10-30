@@ -43,37 +43,44 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 	case messages.Back:
 		state.ProcType = entities.StateStats
 		state.Options.DropLevels()
+		state.Options.DropShowFullStat()
 		resp := chatutils.EditTo(msg, "Что тебе показать?", &keyboards.StatsKeyboard)
 		return state, resp, nil
 	case messages.Jan, messages.Feb, messages.Mar, messages.Apr, messages.May, messages.Jun, messages.Jul, messages.Aug, messages.Sep, messages.Oct, messages.Nov, messages.Dec:
 		state.ProcType = entities.StateStats
 		from, to := utils.MonthInterval(monthMap[msg.Text])
-		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, msg.Text, monthPeriod, state.Options.Levels)
+		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, msg.Text, monthPeriod, state.Options.Levels, state.Options.ShowFullStat)
 
 		resp := chatutils.JoinResp(
 			chatutils.RemoveAndSendNew(msg, replyMsg, nil),
 			chatutils.TextTo(msg, "Что тебе показать?", &keyboards.StatsKeyboard),
 		)
+		state.Options.DropLevels()
+		state.Options.DropShowFullStat()
 		return state, resp, nil
 	case messages.Days30:
 		state.ProcType = entities.StateStats
 		from, to := utils.LastDaysInterval(30)
-		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 30 дней", days30Period, state.Options.Levels)
+		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 30 дней", days30Period, state.Options.Levels, state.Options.ShowFullStat)
 
 		resp := chatutils.JoinResp(
 			chatutils.RemoveAndSendNew(msg, replyMsg, nil),
 			chatutils.TextTo(msg, "Что тебе показать?", &keyboards.StatsKeyboard),
 		)
+		state.Options.DropLevels()
+		state.Options.DropShowFullStat()
 		return state, resp, nil
 	case messages.Days7:
 		state.ProcType = entities.StateStats
 		from, to := utils.LastDaysInterval(7)
-		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 7 дней", days7Period, state.Options.Levels)
+		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 7 дней", days7Period, state.Options.Levels, state.Options.ShowFullStat)
 
 		resp := chatutils.JoinResp(
 			chatutils.RemoveAndSendNew(msg, replyMsg, nil),
 			chatutils.TextTo(msg, "Что тебе показать?", &keyboards.StatsKeyboard),
 		)
+		state.Options.DropLevels()
+		state.Options.DropShowFullStat()
 		return state, resp, nil
 	default:
 		return state, nil, UnknownResuest
@@ -83,7 +90,7 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 func (p *MonthProcessor) CancelFor(userID int64) {
 }
 
-func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from time.Time, to time.Time, text string, periodType PeriodType, levels []int) string {
+func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from time.Time, to time.Time, text string, periodType PeriodType, levels []int, showFullStat bool) string {
 	replyMsgLines := []string{}
 	for _, i := range levels {
 		monthStat, err := p.cbStatStorage.UserStat(ctx, userID, []int{i}, from, to)
@@ -93,8 +100,14 @@ func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from t
 		} else {
 			replyMsgLines = append(
 				replyMsgLines,
-				formatting.CbStatsFormat(monthStat, true, "Твой дроп с *%d КБ* за *%s*", i, text),
+				fmt.Sprintf("Твой дроп с *%d КБ* за *%s*", i, text),
 			)
+			if showFullStat {
+				replyMsgLines = append(
+					replyMsgLines,
+					formatting.CbStatsFormat(monthStat, true),
+				)
+			}
 		}
 
 		monthStatCombined, err := p.cbStatStorage.UserStatCombined(ctx, userID, []int{i}, from, to)

@@ -42,6 +42,9 @@ var AddDropInlineKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 
 var StatsKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(messages.MonthStatsShort, messages.MonthStatsShort),
+	),
+	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData(messages.MonthStats, messages.MonthStats),
 	),
 	tgbotapi.NewInlineKeyboardRow(

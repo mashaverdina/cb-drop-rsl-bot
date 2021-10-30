@@ -86,8 +86,8 @@ func HorizontalCbStat(stat entities.UserCbStat, mapping map[string]string) strin
 	return line
 }
 
-func CbStatsFormat(stats []entities.UserCbStat, withTime bool, headerPattern string, args ...interface{}) string {
-	lines := []string{fmt.Sprintf(headerPattern, args...)}
+func CbStatsFormat(stats []entities.UserCbStat, withTime bool) string {
+	lines := []string{}
 	for _, stat := range stats {
 		line := HorizontalCbStat(stat, ShortMapping)
 		if withTime {

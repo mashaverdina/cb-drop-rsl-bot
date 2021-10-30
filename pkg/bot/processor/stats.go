@@ -3,8 +3,9 @@ package processor
 import (
 	"context"
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"strings"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	chatutils "vkokarev.com/rslbot/pkg/chat_utils"
 	"vkokarev.com/rslbot/pkg/entities"
@@ -62,6 +63,12 @@ func (p *StatsProcessor) Handle(ctx context.Context, state entities.UserState, m
 	case messages.MonthStats:
 		state.ProcType = entities.StateMonth
 		state.Options.WithLevels(4, 5, 6)
+		state.Options.WithShowFullStat(true)
+		return state, chatutils.EditTo(msg, "📅 Выбери период времени", keyboards.ChooseMonthKeyboard()), nil
+	case messages.MonthStatsShort:
+		state.ProcType = entities.StateMonth
+		state.Options.WithLevels(4, 5, 6)
+		state.Options.WithShowFullStat(false)
 		return state, chatutils.EditTo(msg, "📅 Выбери период времени", keyboards.ChooseMonthKeyboard()), nil
 	default:
 		return state, nil, UnknownResuest
