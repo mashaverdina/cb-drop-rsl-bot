@@ -16,19 +16,22 @@ type MainProcessor struct{}
 func (p *MainProcessor) Handle(ctx context.Context, state entities.UserState, msg *ProcessingMessage) (entities.UserState, []tgbotapi.Chattable, error) {
 	switch msg.Text {
 	case messages.Cb5:
-		state.State = entities.StateCb5
+		state.ProcType = entities.StateCb5
+		state.Options.WithLevels(5)
 		resp := chatutils.TextTo(msg, "Что упало с 5го КБ?", keyboards.AddDropInlineKeyboard)
 		return state, resp, nil
 	case messages.Cb6:
-		state.State = entities.StateCb6
+		state.ProcType = entities.StateCb6
+		state.Options.WithLevels(6)
 		resp := chatutils.TextTo(msg, "Что упало с 6го КБ?", keyboards.AddDropInlineKeyboard)
 		return state, resp, nil
 	case messages.Cb4:
-		state.State = entities.StateCb4
+		state.ProcType = entities.StateCb4
+		state.Options.WithLevels(4)
 		resp := chatutils.TextTo(msg, "Что упало с 4го КБ?", keyboards.AddDropInlineKeyboard)
 		return state, resp, nil
 	case messages.Stats:
-		state.State = entities.StateStats
+		state.ProcType = entities.StateStats
 		resp := chatutils.TextTo(msg, "Что тебе показать?", keyboards.StatsKeyboard)
 		return state, resp, nil
 	case messages.Help:

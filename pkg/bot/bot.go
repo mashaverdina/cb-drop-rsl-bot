@@ -25,7 +25,7 @@ type Bot struct {
 	ctx                 context.Context
 	botAPI              *tgbotapi.BotAPI
 	states              map[int64]entities.UserState
-	processors          map[entities.State]processor.Processor
+	processors          map[entities.ProcType]processor.Processor
 	commands            []command.BotCommand
 	cancel              context.CancelFunc
 	updates             tgbotapi.UpdatesChannel
@@ -45,7 +45,7 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
 		ctx:        nil,
 		botAPI:     botAPI,
 		states:     make(map[int64]entities.UserState),
-		processors: make(map[entities.State]processor.Processor),
+		processors: make(map[entities.ProcType]processor.Processor),
 		commands:   make([]command.BotCommand, 0),
 		cancel:     nil,
 		updates:    nil,
@@ -60,7 +60,7 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
 	cbStatStorage := storage.NewCbStatStorage(pg)
 	bot.globalStatManager = globalstat.NewGlobalStatManager(cbStatStorage)
 
-	bot.processors = map[entities.State]processor.Processor{
+	bot.processors = map[entities.ProcType]processor.Processor{
 		entities.StateMainMenu: &processor.MainProcessor{},
 		entities.StateCb4:      processor.NewCbProcessor(4, cbStatStorage),
 		entities.StateCb5:      processor.NewCbProcessor(5, cbStatStorage),
@@ -177,7 +177,7 @@ func (b *Bot) processUserMessage(msg *processor.ProcessingMessage) ([]tgbotapi.C
 	userID := msg.User.UserID
 	state := b.getOrCreateState(userID)
 
-	proc, err := b.findProcessor(state.State)
+	proc, err := b.findProcessor(state.ProcType)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func (b *Bot) processUserMessage(msg *processor.ProcessingMessage) ([]tgbotapi.C
 	return response, nil
 }
 
-func (b *Bot) findProcessor(state entities.State) (processor.Processor, error) {
+func (b *Bot) findProcessor(state entities.ProcType) (processor.Processor, error) {
 	if p, ok := b.processors[state]; ok {
 		return p, nil
 	}

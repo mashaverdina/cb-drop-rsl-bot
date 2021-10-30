@@ -39,14 +39,14 @@ func (p *CbProcessor) Handle(ctx context.Context, state entities.UserState, msg 
 	cbStat := p.getOrCreateStats(state.UserID)
 	switch msg.Text {
 	case messages.Reject:
-		state.State = entities.StateMainMenu
+		state.ProcType = entities.StateMainMenu
 		p.deleteUserStat(state.UserID)
 
+		state.Options.Clear()
 		resp := chatutils.RemoveAndSendNew(msg, "До встречи", keyboards.MainMenuKeyboard)
 		return state, resp, nil
 	case messages.Approve:
-		state.State = entities.StateMainMenu
-
+		state.ProcType = entities.StateMainMenu
 		cbStat := p.getOrCreateStats(state.UserID)
 		err := p.storage.Save(ctx, &cbStat)
 		if err != nil {
@@ -55,6 +55,7 @@ func (p *CbProcessor) Handle(ctx context.Context, state entities.UserState, msg 
 
 		p.updateStats(entities.NewCbUserState(state.UserID, p.level))
 
+		state.Options.Clear()
 		resp := chatutils.JoinResp(
 			chatutils.EditTo(msg, format(cbStat), nil),
 			chatutils.TextTo(msg, "Записано", keyboards.MainMenuKeyboard),

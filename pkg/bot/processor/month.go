@@ -41,13 +41,14 @@ func NewMonthProcessor(cbStatStorage *storage.CbStatStorage, globalStatManager *
 func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, msg *ProcessingMessage) (entities.UserState, []tgbotapi.Chattable, error) {
 	switch msg.Text {
 	case messages.Back:
-		state.State = entities.StateStats
+		state.ProcType = entities.StateStats
+		state.Options.DropLevels()
 		resp := chatutils.EditTo(msg, "Что тебе показать?", &keyboards.StatsKeyboard)
 		return state, resp, nil
 	case messages.Jan, messages.Feb, messages.Mar, messages.Apr, messages.May, messages.Jun, messages.Jul, messages.Aug, messages.Sep, messages.Oct, messages.Nov, messages.Dec:
-		state.State = entities.StateStats
+		state.ProcType = entities.StateStats
 		from, to := utils.MonthInterval(monthMap[msg.Text])
-		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, msg.Text, monthPeriod)
+		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, msg.Text, monthPeriod, state.Options.Levels)
 
 		resp := chatutils.JoinResp(
 			chatutils.RemoveAndSendNew(msg, replyMsg, nil),
@@ -55,9 +56,9 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 		)
 		return state, resp, nil
 	case messages.Days30:
-		state.State = entities.StateStats
+		state.ProcType = entities.StateStats
 		from, to := utils.LastDaysInterval(30)
-		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 30 дней", days30Period)
+		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 30 дней", days30Period, state.Options.Levels)
 
 		resp := chatutils.JoinResp(
 			chatutils.RemoveAndSendNew(msg, replyMsg, nil),
@@ -65,9 +66,9 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 		)
 		return state, resp, nil
 	case messages.Days7:
-		state.State = entities.StateStats
+		state.ProcType = entities.StateStats
 		from, to := utils.LastDaysInterval(7)
-		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 7 дней", days7Period)
+		replyMsg := p.getPeriodDrop(ctx, msg.User.UserID, from, to, "последние 7 дней", days7Period, state.Options.Levels)
 
 		resp := chatutils.JoinResp(
 			chatutils.RemoveAndSendNew(msg, replyMsg, nil),
@@ -82,9 +83,9 @@ func (p *MonthProcessor) Handle(ctx context.Context, state entities.UserState, m
 func (p *MonthProcessor) CancelFor(userID int64) {
 }
 
-func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from time.Time, to time.Time, text string, periodType PeriodType) string {
+func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from time.Time, to time.Time, text string, periodType PeriodType, levels []int) string {
 	replyMsgLines := []string{}
-	for i := 4; i <= 6; i++ {
+	for _, i := range levels {
 		monthStat, err := p.cbStatStorage.UserStat(ctx, userID, []int{i}, from, to)
 		if err != nil || len(monthStat) == 0 {
 			replyMsgLines = append(replyMsgLines, fmt.Sprintf("Статистики по *%d кб* за *%s* пока нет", i, text))
