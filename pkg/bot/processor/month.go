@@ -3,6 +3,7 @@ package processor
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -129,7 +130,10 @@ func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from t
 						if err != nil {
 							return ""
 						}
-						return fmt.Sprintf("лучше, чем у %.2f%% игроков", top*100)
+						if itemCount == 0 {
+							return fmt.Sprintf("как и у других %.1f%%", math.Min(100., 2*top*100))
+						}
+						return fmt.Sprintf("больше, чем у %.1f%%", top*100)
 					}
 				}(i),
 			}), "")
