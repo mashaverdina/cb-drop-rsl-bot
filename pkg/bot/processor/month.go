@@ -129,7 +129,7 @@ func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from t
 						if err != nil {
 							return ""
 						}
-						return fmt.Sprintf("лучше чем у  %.2f%% игроков", top*100)
+						return fmt.Sprintf("лучше, чем у %.2f%% игроков", top*100)
 					}
 				}(i),
 			}), "")
