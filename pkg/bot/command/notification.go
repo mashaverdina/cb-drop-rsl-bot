@@ -33,7 +33,7 @@ func (c *NotificationCommand) Handle(ctx context.Context, user entities.User, co
 
 	n, err := c.notificationStorage.GetByAlias(notificationAlias)
 	if err != nil || n.Alias == "" {
-		return chatutils.TextToNoMarkdown(&user, fmt.Sprintf("Нотификации с названием \"%s\" не найдено", arguments), keyboards.MainMenuKeyboard), nil
+		return chatutils.TextToNoMarkdown(&user, fmt.Sprintf("Оповещение с названием \"%s\" не найдено", arguments), keyboards.MainMenuKeyboard), nil
 	}
 
 	if strings.HasPrefix(commandText, utils.NotificationOn) {
@@ -51,23 +51,23 @@ func (c *NotificationCommand) Handle(ctx context.Context, user entities.User, co
 		}
 		n, err = c.notificationStorage.LoadFire(n.NotificationID, int(hour), int(minutes))
 		if err != nil {
-			return chatutils.TextToNoMarkdown(&user, "Не получилось загрузить нотификацию, попробуй еще раз или напиши нам в саппорт", keyboards.MainMenuKeyboard), nil
+			return chatutils.TextToNoMarkdown(&user, "Не получилось загрузить оповещение, попробуй еще раз или напиши нам в поддержку", keyboards.MainMenuKeyboard), nil
 		}
 		if err := c.notificationStorage.DisableNotification(user.UserID, n); err != nil {
 			log.Println(fmt.Sprintf("error while disabling notification %v", err))
-			return chatutils.TextToNoMarkdown(&user, "Не получилось удалить старую нотификацию, попробуй еще раз или напиши нам в саппорт", keyboards.MainMenuKeyboard), nil
+			return chatutils.TextToNoMarkdown(&user, "Не получилось удалить старое оповещение, попробуй еще раз или напиши нам в поддержку", keyboards.MainMenuKeyboard), nil
 		}
 		if err := c.notificationStorage.EnableNotification(user.UserID, n); err != nil {
 			log.Println(fmt.Sprintf("error while disabling notification %v", err))
-			return chatutils.TextToNoMarkdown(&user, "Не получилось удалить старую нотификацию, попробуй еще раз или напиши нам в саппорт", keyboards.MainMenuKeyboard), nil
+			return chatutils.TextToNoMarkdown(&user, "Не получилось удалить старое оповещение, попробуй еще раз или напиши нам в поддержку", keyboards.MainMenuKeyboard), nil
 		}
-		return chatutils.TextToNoMarkdown(&user, fmt.Sprintf("Нотификация включена, для отключения введи (нажми) /%s%s", utils.NotificationOff, n.Alias), keyboards.MainMenuKeyboard), nil
+		return chatutils.TextToNoMarkdown(&user, fmt.Sprintf("Оповщение включено, для отключения введи (нажми) /%s%s", utils.NotificationOff, n.Alias), keyboards.MainMenuKeyboard), nil
 	} else if strings.HasPrefix(commandText, utils.NotificationOff) {
 		if err := c.notificationStorage.DisableNotification(user.UserID, n); err != nil {
 			log.Println(fmt.Sprintf("error while disabling notification %v", err))
-			return chatutils.TextToNoMarkdown(&user, "Не получилось удалить старую нотификацию, попробуй еще раз или напиши нам в саппорт", keyboards.MainMenuKeyboard), nil
+			return chatutils.TextToNoMarkdown(&user, "Не получилось удалить старое оповещение, попробуй еще раз или напиши нам в поддержку", keyboards.MainMenuKeyboard), nil
 		}
-		return chatutils.TextToNoMarkdown(&user, fmt.Sprintf("Нотификация тебя больше не побеспокоит. Для включения: /%s%s 13:30", utils.NotificationOn, n.Alias), keyboards.MainMenuKeyboard), nil
+		return chatutils.TextToNoMarkdown(&user, fmt.Sprintf("Оповещения тебя больше не побеспокоят. Для включения: /%s%s 13:30", utils.NotificationOn, n.Alias), keyboards.MainMenuKeyboard), nil
 	}
 	return nil, errors.New("not applicable")
 }
