@@ -111,7 +111,7 @@ func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from t
 			}
 		}
 
-		monthStatCombined, err := p.cbStatStorage.UserStatCombined(ctx, userID, []int{i}, from, to)
+		monthStatCombined, err := p.cbStatStorage.UserStatCombined(ctx, userID, i, from, to)
 
 		if err == nil {
 			replyMsgLines = append(replyMsgLines, formatting.VerticalCbStat(monthStatCombined, []formatting.TopFunc{

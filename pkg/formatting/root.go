@@ -37,6 +37,13 @@ type cbStatPair struct {
 }
 
 func CbStatFields(stat entities.UserCbStat) []cbStatPair {
+	if stat.Level == 4 {
+		return []cbStatPair{
+			{messages.AncientShard, stat.AncientShard},
+			{messages.VoidShard, stat.VoidShard},
+			{messages.EpicTome, stat.EpicTome},
+		}
+	}
 	return []cbStatPair{
 		{messages.AncientShard, stat.AncientShard},
 		{messages.VoidShard, stat.VoidShard},

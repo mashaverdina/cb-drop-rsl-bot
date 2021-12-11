@@ -39,7 +39,7 @@ func (s *CbStatStorage) Save(ctx context.Context, state *entities.UserCbStat) er
 }
 
 func (s *CbStatStorage) Load(ctx context.Context, userID int64, relatedTo time.Time, level int) (entities.UserCbStat, error) {
-	state := &entities.UserCbStat{}
+	state := &entities.UserCbStat{Level: level}
 	err := s.pg.ExecuteInTransaction(hasql.Primary, func(db *gorm.DB) error {
 		return db.First(state, "user_id = ? and related_to = ? and level = ?", userID, relatedTo, level).Error
 	})
@@ -76,10 +76,10 @@ func (s *CbStatStorage) LastResource(ctx context.Context, userID int64, level in
 	return &result.Time, nil
 }
 
-func (s *CbStatStorage) UserStatCombined(ctx context.Context, userID int64, levels []int, from time.Time, to time.Time) (entities.UserCbStat, error) {
-	state := &entities.UserCbStat{UserID: userID}
+func (s *CbStatStorage) UserStatCombined(ctx context.Context, userID int64, level int, from time.Time, to time.Time) (entities.UserCbStat, error) {
+	state := &entities.UserCbStat{UserID: userID, Level: level}
 	err := s.pg.ExecuteInTransaction(hasql.Primary, func(db *gorm.DB) error {
-		rows, err := db.Raw("select sum(ancient_shard) as ancient_shard, sum(void_shard) as void_shard, sum(sacred_shard) as sacred_shard, sum(epic_tome) as epic_tome, sum(leg_tome) as leg_tome from user_cb_stats where user_id = ? and level in ? and related_to >= ? and related_to <= ?", userID, levels, from, to).Rows()
+		rows, err := db.Raw("select sum(ancient_shard) as ancient_shard, sum(void_shard) as void_shard, sum(sacred_shard) as sacred_shard, sum(epic_tome) as epic_tome, sum(leg_tome) as leg_tome from user_cb_stats where user_id = ? and level in ? and related_to >= ? and related_to <= ?", userID, []int{level}, from, to).Rows()
 		if err != nil {
 			return err
 		}
