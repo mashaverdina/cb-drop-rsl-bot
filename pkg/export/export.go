@@ -272,11 +272,8 @@ func (e *ExcelExporter) fillData(xls *excelize.File, sheet string, stats []entit
 	err := xls.SetCellFormula(
 		sheet,
 		e.axis(col, minOffset-1),
-		//"=SUM(D6:D11)",
 		fmt.Sprintf("=SUM(%s:%s)", e.axis(col, minOffset), e.axis(col, minOffset+l)),
-		//excelize.FormulaOpts{Type: &formulaType},
 	)
-	print(fmt.Sprintf("=SUM(%s:%s);", e.axis(col, minOffset), e.axis(col, minOffset+l)))
 	if err != nil {
 		return err
 	}
