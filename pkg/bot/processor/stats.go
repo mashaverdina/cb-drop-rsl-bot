@@ -94,14 +94,14 @@ func (p *StatsProcessor) CancelFor(userID int64) {
 }
 
 func (p *StatsProcessor) prepareActivityMessage(activity export.ActivityStat) string {
-	hello := fmt.Sprintf("Ты с нами уже *%d* дней, из которых *%d* дней, ты заносил свой дроп. ", activity.DaysFromFisrtStart, activity.TotalDays)
+	hello := fmt.Sprintf("Ты с нами уже *%d* дней, из которых *%d* дней, ты заносил(а) свой дроп. ", activity.DaysFromFisrtStart, activity.TotalDays)
 	if activity.IsActive(0.6) {
 		hello += "Поразительное упорство! 🤘🤘🤘"
 	} else {
 		hello += "Надеюсь, что ты еще распробуешь бот 😎😎😎"
 	}
-	cb := fmt.Sprintf("За это время ты убил *%d* 👾😈👹 ", activity.CbTotalKilled) +
-		fmt.Sprintf("И получил *%d*💛 + *%d*💜 + *%d*💙 + *%d*📙 + *%d*📘", activity.Sacred, activity.Void, activity.Ancient, activity.LegTome, activity.EpicTome)
+	cb := fmt.Sprintf("За это время ты убил(а) *%d* 👾😈👹 ", activity.CbTotalKilled) +
+		fmt.Sprintf("И получил(а) *%d*💛 + *%d*💜 + *%d*💙 + *%d*📙 + *%d*📘", activity.Sacred, activity.Void, activity.Ancient, activity.LegTome, activity.EpicTome)
 	ending := "Спасибо, что пользуешься ботом 🥰"
 	return strings.Join([]string{hello, cb, ending}, "\n")
 }
