@@ -94,7 +94,7 @@ func (p *StatsProcessor) CancelFor(userID int64) {
 }
 
 func (p *StatsProcessor) prepareActivityMessage(activity export.ActivityStat) string {
-	hello := fmt.Sprintf("Ты с нами уже *%d* дней, из которых *%d* дней, ты заносил(а) свой дроп. ", activity.DaysFromFisrtStart, activity.TotalDays)
+	hello := fmt.Sprintf("Ты с нами уже *%d* дней, из которых *%d* дней ты заносил(а) свой дроп. ", activity.DaysFromFisrtStart, activity.TotalDays)
 	if activity.IsActive(0.6) {
 		hello += "Поразительное упорство! 🤘🤘🤘"
 	} else {

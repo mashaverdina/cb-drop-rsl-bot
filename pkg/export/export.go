@@ -319,6 +319,10 @@ func (e *ExcelExporter) genActivityStat(stats []entities.UserCbStat) ActivitySta
 	minDt, _ := e.dateRange(stats)
 	activity.DaysFromFisrtStart = int(time.Now().Sub(minDt).Hours() / 24)
 
+	if activity.DaysFromFisrtStart < activity.TotalDays {
+		activity.DaysFromFisrtStart = activity.TotalDays
+	}
+
 	return activity
 }
 
