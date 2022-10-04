@@ -100,7 +100,7 @@ func (p *StatsProcessor) prepareActivityMessage(activity export.ActivityStat) st
 	} else {
 		hello += "Надеюсь, что ты еще распробуешь бот 😎😎😎"
 	}
-	cb := fmt.Sprintf("За это время ты убил *%d* 👾/😈/👹 ", activity.CbTotalKilled) +
+	cb := fmt.Sprintf("За это время ты убил *%d* 👾😈👹 ", activity.CbTotalKilled) +
 		fmt.Sprintf("И получил *%d*💛 + *%d*💜 + *%d*💙 + *%d*📙 + *%d*📘", activity.Sacred, activity.Void, activity.Ancient, activity.LegTome, activity.EpicTome)
 	ending := "Спасибо, что пользуешься ботом 🥰"
 	return strings.Join([]string{hello, cb, ending}, "\n")

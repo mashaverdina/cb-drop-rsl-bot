@@ -101,7 +101,7 @@ func (p *MonthProcessor) getPeriodDrop(ctx context.Context, userID int64, from t
 		} else {
 			replyMsgLines = append(
 				replyMsgLines,
-				fmt.Sprintf("Твой дроп с *%d КБ* за *%s*", i, text),
+				fmt.Sprintf("Твой дроп с *%d КБ* за *%s* (заполнено *%d/%d*)", i, text, len(monthStat), int64(1+to.Sub(from).Hours()/24)),
 			)
 			if showFullStat {
 				replyMsgLines = append(
