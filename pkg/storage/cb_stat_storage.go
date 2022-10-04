@@ -49,6 +49,17 @@ func (s *CbStatStorage) Load(ctx context.Context, userID int64, relatedTo time.T
 	return *state, nil
 }
 
+func (s *CbStatStorage) LoadAll(ctx context.Context, userID int64) ([]entities.UserCbStat, error) {
+	var state []entities.UserCbStat
+	err := s.pg.ExecuteInTransaction(hasql.Primary, func(db *gorm.DB) error {
+		return db.Order("related_to").Find(&state, "user_id = ?", userID).Error
+	})
+	if err != nil {
+		return []entities.UserCbStat{}, err
+	}
+	return state, nil
+}
+
 func (s *CbStatStorage) LastResource(ctx context.Context, userID int64, level int, resource string) (*time.Time, error) {
 	var result *sql.NullTime = new(sql.NullTime)
 	query := fmt.Sprintf("select max(related_to) as related_to from user_cb_stats where  user_id = ? and level = ? and %s > 0", resource)

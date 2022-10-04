@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -79,6 +80,7 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
 		&command.HelpCommand{},
 		&command.FAQCommand{},
 		&command.SupportCommand{},
+		command.NewExportCommand(cbStatStorage),
 		command.NewClanCommand(bot.userStorage),
 		command.NewNotificationCommand(notificationStorage),
 		command.NewNotifyAllCommand(bot.userStorage, bot.msgQueue),
@@ -280,6 +282,13 @@ func (b *Bot) processUpdate(update tgbotapi.Update) {
 	for _, msg := range msgs {
 		if _, err := b.botAPI.Send(msg); err != nil {
 			log.Printf("error while sending message: %v\n", err)
+		}
+		if dc, ok := msg.(tgbotapi.DocumentConfig); ok {
+			fn := (dc.File).(string)
+			err := os.Remove(fn)
+			if err != nil {
+				log.Printf("error while deleting file %s: %v\n", fn, err)
+			}
 		}
 	}
 }
