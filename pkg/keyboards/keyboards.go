@@ -75,6 +75,9 @@ var StatsKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardButtonData(messages.LastLegTome, messages.LastLegTome),
 	),
 	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(messages.FullStatExcel, messages.FullStatExcel),
+	),
+	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData(messages.Back, messages.Back),
 	),
 )
