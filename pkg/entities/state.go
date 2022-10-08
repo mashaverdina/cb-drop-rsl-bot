@@ -14,6 +14,7 @@ const (
 	StateCb5      = "cb-5"
 	StateCb4      = "cb-4"
 	StateStats    = "stats"
+	StateClans    = "clans"
 	StateMonth    = "month"
 )
 

@@ -34,6 +34,10 @@ func (p *MainProcessor) Handle(ctx context.Context, state entities.UserState, ms
 		state.ProcType = entities.StateStats
 		resp := chatutils.TextTo(msg, "Что тебе показать?", keyboards.StatsKeyboard)
 		return state, resp, nil
+	case messages.Clans:
+		state.ProcType = entities.StateClans
+		resp := chatutils.TextTo(msg, "Добро пожаловать в меню клана", keyboards.ClansKeyboard)
+		return state, resp, nil
 	case messages.FullStats:
 		resp := chatutils.TextTo(msg, messages.FullStatsMsg, keyboards.MainMenuKeyboard)
 		return state, resp, nil
@@ -52,7 +56,7 @@ func (p *MainProcessor) Handle(ctx context.Context, state entities.UserState, ms
 
 func (p *MainProcessor) CanHandle(msg *ProcessingMessage) bool {
 	switch msg.Text {
-	case messages.Cb4, messages.Cb5, messages.Cb6, messages.Stats, messages.FullStats, messages.Help:
+	case messages.Cb4, messages.Cb5, messages.Cb6, messages.Stats, messages.FullStats, messages.Clans, messages.Help:
 		return true
 	default:
 		return false

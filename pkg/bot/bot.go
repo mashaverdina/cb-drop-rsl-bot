@@ -66,6 +66,7 @@ func NewBot(botAPI *tgbotapi.BotAPI, pg *pg.PGClient, numWorkers uint64) *Bot {
 		entities.StateCb5:      processor.NewCbProcessor(5, cbStatStorage),
 		entities.StateCb6:      processor.NewCbProcessor(6, cbStatStorage),
 		entities.StateStats:    processor.NewStatsProcessor(cbStatStorage),
+		entities.StateClans:    processor.NewClansProcessor(cbStatStorage),
 		entities.StateMonth:    processor.NewMonthProcessor(cbStatStorage, bot.globalStatManager),
 	}
 	bot.userStorage = storage.NewUserStorage(pg)
